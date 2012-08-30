@@ -27,6 +27,8 @@ private slots:
     void error(const QString& msg);
     
 private:
+    void authorized();
+
     Ui::MainWindow *ui;
     QNetworkAccessManager* manager_;
     QPointer<GoogleDrive::Session> session_;

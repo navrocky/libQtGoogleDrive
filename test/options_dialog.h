@@ -14,8 +14,15 @@ class OptionsDialog : public QDialog
 public:
     explicit OptionsDialog(QWidget *parent = 0);
     ~OptionsDialog();
-    
+
+    bool event(QEvent*);
+
+public slots:
+    void accept();
+
 private:
+    void updateDialog();
+
     Ui::OptionsDialog *ui;
 };
 

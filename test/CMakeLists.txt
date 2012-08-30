@@ -9,6 +9,7 @@ include(${QT_USE_FILE})
 set(HEADERS
     main_window.h
     options_dialog.h
+    options.h
 )
 
 set(MOC
