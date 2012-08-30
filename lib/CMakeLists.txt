@@ -1,7 +1,15 @@
 set(TARGET google_drive)
 
+project(${TARGET})
+
 find_package(Qt4 REQUIRED QtCore QtNetwork )
 include(${QT_USE_FILE})
+
+FIND_PACKAGE (QJSON REQUIRED)
+
+INCLUDE_DIRECTORIES (
+    ${QJSON_INCLUDE_DIR}
+)
 
 set(HEADERS
     drive_manager.h
@@ -32,7 +40,7 @@ qt4_wrap_cpp(SOURCES ${MOC_HEADERS})
 
 add_library(${TARGET} STATIC ${HEADERS} ${SOURCES})
 
-target_link_libraries( ${TARGET} ${QT_LIBRARIES} ${DEPS})
+target_link_libraries( ${TARGET} ${QT_LIBRARIES} ${DEPS} ${QJSON_LIBRARIES})
 
 
 

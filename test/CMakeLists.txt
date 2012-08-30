@@ -3,7 +3,7 @@ project(${TARGET})
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-find_package(Qt4 REQUIRED QtCore QtGui)
+find_package(Qt4 REQUIRED QtCore QtGui QtNetwork)
 include(${QT_USE_FILE})
 
 set(HEADERS
