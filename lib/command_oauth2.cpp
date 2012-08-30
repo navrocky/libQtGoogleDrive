@@ -5,6 +5,8 @@
 #include <QNetworkAccessManager>
 #include <QVariant>
 #include <QByteArray>
+#include <QStringList>
+#include <QtDebug>
 
 #include <qjson/parser.h>
 
@@ -18,15 +20,51 @@ CommandOAuth2::CommandOAuth2(Session* s)
 {
 }
 
+void CommandOAuth2::setScope(AccessScopes scopes)
+{
+    QStringList sl;
+    const QString prefix("https://www.googleapis.com/auth/drive");
+
+    if (scopes.testFlag(FileScope))
+        sl << prefix + ".file";
+
+    if (scopes.testFlag(AppsReadonyScope))
+        sl << prefix + ".apps.readonly";
+
+    if (scopes.testFlag(ReadonlyScope))
+        sl << prefix + ".readonly";
+
+    if (scopes.testFlag(ReadonlyMetadataScope))
+        sl << prefix + ".readonly.metadata";
+
+    if (scopes.testFlag(FullAccessScope))
+        sl << prefix;
+
+    scope_ = sl.join("%20");
+}
+
 QUrl CommandOAuth2::getLoginUrl() const
 {
-    const QString scope("https://www.googleapis.com/auth/drive");
+    Q_ASSERT(!scope_.isEmpty());
+    if (scope_.isEmpty())
+    {
+        qCritical() << "Scope isn't specified";
+        return QUrl();
+    }
+
+    Q_ASSERT(!clientId_.isEmpty());
+    if (clientId_.isEmpty())
+    {
+        qCritical() << "ClientID isn't specified";
+        return QUrl();
+    }
+
     const QString responseType("code");
     const QString redirectUri("urn:ietf:wg:oauth:2.0:oob");
 
     return QUrl(QString ("https://accounts.google.com/o/oauth2/auth?client_id=%1&scope=%2&response_type=%3&redirect_uri=%4")
                 .arg(clientId_)
-                .arg(scope)
+                .arg(scope_)
                 .arg(responseType)
                 .arg(redirectUri));
 }

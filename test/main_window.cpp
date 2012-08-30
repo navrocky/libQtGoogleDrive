@@ -70,6 +70,7 @@ void MainWindow::login()
     oauth2_ = new CommandOAuth2(session_);
     oauth2_->setClientId(clientId);
     oauth2_->setClientSecret(clientSecret);
+    oauth2_->setScope(CommandOAuth2::FullAccessScope);
     connect(oauth2_.data(), SIGNAL(finished()), SLOT(authFinished()));
     connect(oauth2_.data(), SIGNAL(error(QString)), SLOT(error(QString)));
 
