@@ -13,7 +13,7 @@ class Command : public QObject
 {
     Q_OBJECT
 public:
-    Command(Session* session);
+    explicit Command(Session* session);
 
 signals:
     void error(QString msg);

@@ -27,7 +27,11 @@ private slots:
     void error(const QString& msg);
     
 private:
-    void authorized();
+    void writeHint(const QString& msg, bool time = true);
+    void writeError(const QString& msg, bool time = true);
+    void writeDelimiter();
+    void writeText(const QString& msg);
+    void writeMessage(const QString& msg, QColor col, bool time);
 
     Ui::MainWindow *ui;
     QNetworkAccessManager* manager_;

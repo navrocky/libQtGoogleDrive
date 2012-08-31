@@ -14,8 +14,10 @@ INCLUDE_DIRECTORIES (
 set(HEADERS
     drive_manager.h
     session.h
+    file_info.h
     command.h
     command_oauth2.h
+    command_file_list.h
 )
 
 set(MOC_HEADERS
@@ -23,13 +25,16 @@ set(MOC_HEADERS
     session.h
     command.h
     command_oauth2.h
+    command_file_list.h
 )
 
 set(SOURCES
     drive_manager.cpp
     session.cpp
+    file_info.cpp
     command.cpp
     command_oauth2.cpp
+    command_file_list.cpp
 )
 
 set(DEPS

@@ -13,7 +13,20 @@
   <property name="windowTitle">
    <string>Google Drive Test</string>
   </property>
-  <widget class="QWidget" name="centralwidget"/>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout">
+    <property name="margin">
+     <number>0</number>
+    </property>
+    <item>
+     <widget class="QTextEdit" name="textEdit">
+      <property name="readOnly">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </item>
+   </layout>
+  </widget>
   <widget class="QMenuBar" name="menubar">
    <property name="geometry">
     <rect>
@@ -27,7 +40,8 @@
     <property name="title">
      <string>File</string>
     </property>
-    <addaction name="actionLogin"/>
+    <addaction name="actionClear_log"/>
+    <addaction name="separator"/>
     <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menuOptions">
@@ -36,7 +50,15 @@
     </property>
     <addaction name="actionEdit_options"/>
    </widget>
+   <widget class="QMenu" name="menuOperations">
+    <property name="title">
+     <string>Operations</string>
+    </property>
+    <addaction name="actionLogin"/>
+    <addaction name="actionGet_file_list"/>
+   </widget>
    <addaction name="menuLogin"/>
+   <addaction name="menuOperations"/>
    <addaction name="menuOptions"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
@@ -55,6 +77,31 @@
     <string>Edit options</string>
    </property>
   </action>
+  <action name="actionGet_file_list">
+   <property name="text">
+    <string>Get file list</string>
+   </property>
+  </action>
+  <action name="actionClear_log">
+   <property name="text">
+    <string>Clear log</string>
+   </property>
+  </action>
+  <action name="action">
+   <property name="text">
+    <string>-</string>
+   </property>
+  </action>
+  <action name="action_2">
+   <property name="text">
+    <string>---</string>
+   </property>
+  </action>
+  <action name="action_3">
+   <property name="text">
+    <string>--</string>
+   </property>
+  </action>
  </widget>
  <resources/>
  <connections>
@@ -71,6 +118,22 @@
     <hint type="destinationlabel">
      <x>399</x>
      <y>299</y>
+    </hint>
+   </hints>
+  </connection>
+  <connection>
+   <sender>actionClear_log</sender>
+   <signal>triggered()</signal>
+   <receiver>textEdit</receiver>
+   <slot>clear()</slot>
+   <hints>
+    <hint type="sourcelabel">
+     <x>-1</x>
+     <y>-1</y>
+    </hint>
+    <hint type="destinationlabel">
+     <x>399</x>
+     <y>300</y>
     </hint>
    </hints>
   </connection>

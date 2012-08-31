@@ -63,7 +63,7 @@ public:
 signals:
     /*! Signal emitted when requestAuthToken() query returns valid refresh token
      *  and access token.
-        \sa requestAuthToken() */
+        \sa requestAccessToken() */
     void finished();
 
 public slots:
@@ -71,10 +71,10 @@ public slots:
         from browser. Signal finished() emitting when request finished successfully
         otherwise error() emitted.
         \sa emit(), Command::error()*/
-    void requestAuthToken(const QString& authCode);
+    void requestAccessToken(const QString& authCode);
 
 private slots:
-    void requestAuthTokenFinished();
+    void requestAccessTokenFinished();
 
 private:
     QString clientId_;

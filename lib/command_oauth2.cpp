@@ -69,7 +69,7 @@ QUrl CommandOAuth2::getLoginUrl() const
                 .arg(redirectUri));
 }
 
-void CommandOAuth2::requestAuthToken(const QString &authCode)
+void CommandOAuth2::requestAccessToken(const QString &authCode)
 {
     QNetworkRequest request(QUrl("https://accounts.google.com/o/oauth2/token"));
     QString str = QString("code=%1&client_id=%2&client_secret=%3&grant_type=%4&redirect_uri=%5")
@@ -82,11 +82,11 @@ void CommandOAuth2::requestAuthToken(const QString &authCode)
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
 
     QNetworkReply* reply = session()->networkManager()->post(request, str.toUtf8());
-    connect (reply, SIGNAL(finished()), this, SLOT(requestAuthTokenFinished()));
+    connect (reply, SIGNAL(finished()), this, SLOT(requestAccessTokenFinished()));
     reply->setParent(this);
 }
 
-void CommandOAuth2::requestAuthTokenFinished()
+void CommandOAuth2::requestAccessTokenFinished()
 {
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     Q_ASSERT(reply);
@@ -94,6 +94,12 @@ void CommandOAuth2::requestAuthTokenFinished()
         return;
 
     reply->deleteLater();
+
+//    if (reply->error() != QNetworkReply::NoError)
+//    {
+//        throwError(tr("Request access token is failed: %1").arg(reply->errorString()));
+//        return;
+//    }
 
     QByteArray data = reply->readAll();
 

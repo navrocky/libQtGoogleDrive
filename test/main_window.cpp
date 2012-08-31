@@ -6,6 +6,9 @@
 #include <QDesktopServices>
 #include <QMessageBox>
 #include <QSettings>
+#include <QTextEdit>
+#include <QScrollBar>
+#include <QTime>
 #include <QtDebug>
 
 #include "../lib/command_oauth2.h"
@@ -20,10 +23,23 @@ MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
     , ui(new Ui::MainWindow)
     , manager_(new QNetworkAccessManager(this))
+    , session_(new Session(manager_, this))
 {
     ui->setupUi(this);
     connect(ui->actionLogin, SIGNAL(triggered()), SLOT(login()));
     connect(ui->actionEdit_options, SIGNAL(triggered()), SLOT(showOptionsDialog()));
+    writeText(tr("<p><h1>Welcome to the Qt Google Drive API test</h1></p><br>"));
+
+    QSettings s;
+    QString clientId = s.value(cClientId).toString();
+    QString clientSecret = s.value(cClientSecret).toString();
+    QString refreshToken = s.value(cRefreshToken).toString();
+    if (clientId.isEmpty() || clientSecret.isEmpty())
+    {
+        writeHint(tr("<br>Firstly you have to fill Client ID and Client Secret in the options dialog."
+                     " After that you can try to login and execute other operations."), false);
+    }
+    session_->setRefreshToken(refreshToken);
 }
 
 MainWindow::~MainWindow()
@@ -39,12 +55,9 @@ void MainWindow::showOptionsDialog()
 
 void MainWindow::login()
 {
-    delete session_;
-
     QSettings s;
     QString clientId = s.value(cClientId).toString();
     QString clientSecret = s.value(cClientSecret).toString();
-    QString refreshToken = s.value(cRefreshToken).toString();
     if (clientId.isEmpty() || clientSecret.isEmpty())
     {
         QMessageBox mb(QMessageBox::Warning, tr("Your options is incompleted"),
@@ -54,16 +67,6 @@ void MainWindow::login()
         mb.setTextFormat(Qt::RichText);
         mb.exec();
         showOptionsDialog();
-        return;
-    }
-
-    session_ = new Session(manager_, this);
-
-    if (!refreshToken.isEmpty())
-    {
-        session_->setRefreshToken(refreshToken);
-        session_->setAccessToken(s.value(cAccessToken).toString());
-        authorized();
         return;
     }
 
@@ -81,7 +84,7 @@ void MainWindow::login()
     if (code.isEmpty())
         return;
 
-    oauth2_->requestAuthToken(code);
+    oauth2_->requestAccessToken(code);
 }
 
 void MainWindow::authFinished()
@@ -90,19 +93,51 @@ void MainWindow::authFinished()
     QSettings s;
     s.setValue(cRefreshToken, session_->refreshToken());
     s.setValue(cAccessToken, session_->accessToken());
-    QMessageBox::information(this, tr("Authorization finished"),
-                             tr("Access token: <b>%1</b><br><br>Refresh token: <b>%2</b>")
-                             .arg(session_->accessToken())
-                             .arg(session_->refreshToken()));
-    authorized();
+
+    writeHint(tr("Authorization finished. <br>Access token: <b>%1</b><br><br>Refresh token: <b>%2</b>")
+              .arg(session_->accessToken())
+              .arg(session_->refreshToken()));
 }
 
 void MainWindow::error(const QString &msg)
 {
-    QMessageBox::critical(this, tr("Error occurred"), msg);
+    writeError(tr("Authorization error occurred: %1").arg(msg));
 }
 
-void MainWindow::authorized()
+void MainWindow::writeText(const QString &msg)
 {
-    qDebug() << "authorized";
+    QTextEdit* te = ui->textEdit;
+    QScrollBar* scroll = te->verticalScrollBar();
+    bool atEnd = scroll->value() == scroll->maximum();
+    te->moveCursor(QTextCursor::End);
+    te->insertHtml(msg);
+    if (atEnd)
+        scroll->setValue(scroll->maximum());
+}
+
+void MainWindow::writeMessage(const QString &msg, QColor col, bool time)
+{
+    QString timeStr;
+    if (time)
+    {
+        timeStr = QString("<span style=\"font-size: 7pt;\">%1 : </span>")
+                .arg(QTime::currentTime().toString("hh:mm:ss"));
+    }
+    writeText(QString("%1<span style=\"color: %2;\">%3</span><br>")
+              .arg(timeStr).arg(col.name()).arg(msg));
+}
+
+void MainWindow::writeHint(const QString &msg, bool time)
+{
+    writeMessage(msg, Qt::blue, time);
+}
+
+void MainWindow::writeError(const QString &msg, bool time)
+{
+    writeMessage(msg, Qt::red, time);
+}
+
+void MainWindow::writeDelimiter()
+{
+    writeText("<hr>");
 }
