@@ -1,13 +1,13 @@
 #ifndef GOOGLE_DRIVE_COMMAD_FILE_LIST_H
 #define GOOGLE_DRIVE_COMMAD_FILE_LIST_H
 
-#include "command.h"
+#include "authorized_command.h"
 #include "file_info.h"
 
 namespace GoogleDrive
 {
 
-class CommandFileList : public Command
+class CommandFileList : public AuthorizedCommand
 {
     Q_OBJECT
 public:
@@ -20,14 +20,15 @@ public slots:
     void exec(const QString& query = QString());
 
 signals:
-    void finished(const FileInfoList& files);
+    void finished(const GoogleDrive::FileInfoList& files);
+
+protected:
+    void reexecuteQuery();
 
 private slots:
     void queryFinished();
 
 private:
-    void execute();
-
     FileInfoList files_;
     QString query_;
 };

@@ -16,6 +16,8 @@ set(HEADERS
     session.h
     file_info.h
     command.h
+    authorized_command.h
+    command_refresh_token.h
     command_oauth2.h
     command_file_list.h
 )
@@ -24,6 +26,8 @@ set(MOC_HEADERS
     drive_manager.h
     session.h
     command.h
+    authorized_command.h
+    command_refresh_token.h
     command_oauth2.h
     command_file_list.h
 )
@@ -33,6 +37,8 @@ set(SOURCES
     session.cpp
     file_info.cpp
     command.cpp
+    authorized_command.cpp
+    command_refresh_token.cpp
     command_oauth2.cpp
     command_file_list.cpp
 )

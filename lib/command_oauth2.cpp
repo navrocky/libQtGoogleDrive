@@ -52,8 +52,8 @@ QUrl CommandOAuth2::getLoginUrl() const
         return QUrl();
     }
 
-    Q_ASSERT(!clientId_.isEmpty());
-    if (clientId_.isEmpty())
+    Q_ASSERT(!session()->clientId().isEmpty());
+    if (session()->clientId().isEmpty())
     {
         qCritical() << "ClientID isn't specified";
         return QUrl();
@@ -63,7 +63,7 @@ QUrl CommandOAuth2::getLoginUrl() const
     const QString redirectUri("urn:ietf:wg:oauth:2.0:oob");
 
     return QUrl(QString ("https://accounts.google.com/o/oauth2/auth?client_id=%1&scope=%2&response_type=%3&redirect_uri=%4")
-                .arg(clientId_)
+                .arg(session()->clientId())
                 .arg(scope_)
                 .arg(responseType)
                 .arg(redirectUri));
@@ -71,11 +71,12 @@ QUrl CommandOAuth2::getLoginUrl() const
 
 void CommandOAuth2::requestAccessToken(const QString &authCode)
 {
+    emitStarted();
     QNetworkRequest request(QUrl("https://accounts.google.com/o/oauth2/token"));
     QString str = QString("code=%1&client_id=%2&client_secret=%3&grant_type=%4&redirect_uri=%5")
             .arg(authCode)
-            .arg(clientId_)
-            .arg(clientSecret_)
+            .arg(session()->clientId())
+            .arg(session()->clientSecret())
             .arg("authorization_code")
             .arg("urn:ietf:wg:oauth:2.0:oob");
 
@@ -88,54 +89,24 @@ void CommandOAuth2::requestAccessToken(const QString &authCode)
 
 void CommandOAuth2::requestAccessTokenFinished()
 {
+    tryAutoDelete();
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
-    Q_ASSERT(reply);
     if (!reply)
         return;
-
     reply->deleteLater();
 
-//    if (reply->error() != QNetworkReply::NoError)
-//    {
-//        throwError(tr("Request access token is failed: %1").arg(reply->errorString()));
-//        return;
-//    }
-
-    QByteArray data = reply->readAll();
-
-    bool ok = false;
-    QVariant res = QJson::Parser().parse(data, &ok);
-    if (!ok)
-    {
-        throwError(tr("Invalid json response from \"%1\"").arg(reply->url().toString()));
+    if (checkInvalidReply(reply))
         return;
-    }
 
-    const QString errorKey("error");
-    QVariantMap map = res.toMap();
-
-    if (map.contains (errorKey))
-    {
-        throwError(tr("Error returned \"%1\" from \"%2\"")
-                   .arg(map[errorKey].toString()).arg(reply->url().toString()));
+    QVariantMap map;
+    if (!parseJsonReply(reply, map))
         return;
-    }
 
-    const QString accessTokenKey("access_token");
-    QString accessToken;
-    if (map.contains(accessTokenKey))
-        accessToken = map[accessTokenKey].toString();
-
-    const QString refreshTokenKey("refresh_token");
-    QString refreshToken;
-    if (map.contains (refreshTokenKey))
-        refreshToken = map[refreshTokenKey].toString();
-
-    Q_ASSERT(!accessToken.isEmpty() && !refreshToken.isEmpty());
-
+    QString accessToken = map["access_token"].toString();
+    QString refreshToken = map["refresh_token"].toString();
     if (accessToken.isEmpty() || refreshToken.isEmpty())
     {
-        throwError(tr("Access or refresh token is empty in reply to \"%1\"")
+        emitError(tr("Access or refresh token is empty in reply to \"%1\"")
                    .arg(reply->url().toString()));
         return;
     }
@@ -144,6 +115,7 @@ void CommandOAuth2::requestAccessTokenFinished()
     session()->setRefreshToken(refreshToken);
 
     emit finished();
+    emitFinished();
 }
 
 }

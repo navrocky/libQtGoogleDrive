@@ -9,9 +9,11 @@
 #include <QTextEdit>
 #include <QScrollBar>
 #include <QTime>
+#include <QStatusBar>
 #include <QtDebug>
 
 #include "../lib/command_oauth2.h"
+#include "../lib/command_file_list.h"
 
 #include "options_dialog.h"
 #include "ui_main_window.h"
@@ -27,6 +29,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     connect(ui->actionLogin, SIGNAL(triggered()), SLOT(login()));
+    connect(ui->actionGet_file_list, SIGNAL(triggered()), SLOT(getFileList()));
     connect(ui->actionEdit_options, SIGNAL(triggered()), SLOT(showOptionsDialog()));
     writeText(tr("<p><h1>Welcome to the Qt Google Drive API test</h1></p><br>"));
 
@@ -39,7 +42,21 @@ MainWindow::MainWindow(QWidget *parent)
         writeHint(tr("<br>Firstly you have to fill Client ID and Client Secret in the options dialog."
                      " After that you can try to login and execute other operations."), false);
     }
+    session_->setClientId(clientId);
+    session_->setClientSecret(clientSecret);
     session_->setRefreshToken(refreshToken);
+    connect(session_,
+            SIGNAL(started(GoogleDrive::Command*)),
+            SLOT(started(GoogleDrive::Command*)));
+    connect(session_,
+            SIGNAL(finished(GoogleDrive::Command*)),
+            SLOT(finished(GoogleDrive::Command*)));
+    connect(session_,
+            SIGNAL(error(GoogleDrive::Command*,QString)),
+            SLOT(error(GoogleDrive::Command*,QString)));
+    connect(session_,
+            SIGNAL(reauthorizationNeeded(GoogleDrive::Command*,QString)),
+            SLOT(reauthorizationNeeded(GoogleDrive::Command*,QString)));
 }
 
 MainWindow::~MainWindow()
@@ -47,17 +64,37 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
+void MainWindow::started(Command *cmd)
+{
+    executingCommands_.insert(cmd);
+    updateStatusBar();
+}
+
+void MainWindow::finished(Command *cmd)
+{
+    executingCommands_.remove(cmd);
+    updateStatusBar();
+}
+
 void MainWindow::showOptionsDialog()
 {
     OptionsDialog dlg(this);
-    dlg.exec();
+    if (dlg.exec() != QDialog::Accepted)
+        return;
+    QSettings s;
+    QString clientId = s.value(cClientId).toString();
+    QString clientSecret = s.value(cClientSecret).toString();
+    QString refreshToken = s.value(cRefreshToken).toString();
+    session_->setClientId(clientId);
+    session_->setClientSecret(clientSecret);
+    session_->setRefreshToken(refreshToken);
 }
 
 void MainWindow::login()
 {
     QSettings s;
-    QString clientId = s.value(cClientId).toString();
-    QString clientSecret = s.value(cClientSecret).toString();
+    QString clientId = session_->clientId();
+    QString clientSecret = session_->clientSecret();
     if (clientId.isEmpty() || clientSecret.isEmpty())
     {
         QMessageBox mb(QMessageBox::Warning, tr("Your options is incompleted"),
@@ -70,26 +107,23 @@ void MainWindow::login()
         return;
     }
 
-    oauth2_ = new CommandOAuth2(session_);
-    oauth2_->setClientId(clientId);
-    oauth2_->setClientSecret(clientSecret);
-    oauth2_->setScope(CommandOAuth2::FullAccessScope);
-    connect(oauth2_.data(), SIGNAL(finished()), SLOT(authFinished()));
-    connect(oauth2_.data(), SIGNAL(error(QString)), SLOT(error(QString)));
+    CommandOAuth2* cmd = new CommandOAuth2(session_);
+    cmd->setAutoDelete(true);
+    cmd->setScope(CommandOAuth2::FullAccessScope);
+    connect(cmd, SIGNAL(finished()), SLOT(authFinished()));
 
-    QDesktopServices::openUrl(oauth2_->getLoginUrl());
+    QDesktopServices::openUrl(cmd->getLoginUrl());
 
     QString code = QInputDialog::getText(this, tr("Login"),
                                          tr("Enter the authorization code from web browser"));
     if (code.isEmpty())
         return;
 
-    oauth2_->requestAccessToken(code);
+    cmd->requestAccessToken(code);
 }
 
 void MainWindow::authFinished()
 {
-    oauth2_->deleteLater();
     QSettings s;
     s.setValue(cRefreshToken, session_->refreshToken());
     s.setValue(cAccessToken, session_->accessToken());
@@ -99,9 +133,38 @@ void MainWindow::authFinished()
               .arg(session_->refreshToken()));
 }
 
-void MainWindow::error(const QString &msg)
+void MainWindow::error(GoogleDrive::Command* cmd, const QString &msg)
 {
-    writeError(tr("Authorization error occurred: %1").arg(msg));
+    writeError(msg);
+}
+
+void MainWindow::reauthorizationNeeded(Command *cmd, const QString &msg)
+{
+    writeError(tr("Reauthorization needed: %1").arg(msg));
+}
+
+void MainWindow::getFileList()
+{
+    CommandFileList* cmd = new CommandFileList(session_);
+    cmd->setAutoDelete(true);
+    connect(cmd,
+            SIGNAL(finished(GoogleDrive::FileInfoList)),
+            SLOT(getFileListFinished(GoogleDrive::FileInfoList)));
+    cmd->exec();
+}
+
+void MainWindow::getFileListFinished(const FileInfoList& list)
+{
+    writeHint(tr("File list aquired"));
+    foreach (const FileInfo& fi, list)
+    {
+        writeInfo(fi.title());
+    }
+}
+
+void MainWindow::writeInfo(const QString &msg, bool time)
+{
+    writeMessage(msg, Qt::black, time);
 }
 
 void MainWindow::writeText(const QString &msg)
@@ -125,6 +188,21 @@ void MainWindow::writeMessage(const QString &msg, QColor col, bool time)
     }
     writeText(QString("%1<span style=\"color: %2;\">%3</span><br>")
               .arg(timeStr).arg(col.name()).arg(msg));
+}
+
+void MainWindow::updateStatusBar()
+{
+    if (executingCommands_.isEmpty())
+    {
+        statusBar()->clearMessage();
+        return;
+    }
+    QStringList sl;
+    foreach (Command* cmd, executingCommands_)
+    {
+        sl << cmd->metaObject()->className();
+    }
+    statusBar()->showMessage(tr("Executing commands: %1").arg(sl.join(", ")));
 }
 
 void MainWindow::writeHint(const QString &msg, bool time)

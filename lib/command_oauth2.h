@@ -45,12 +45,6 @@ public:
 
     CommandOAuth2(Session*);
 
-    QString clientId() const {return clientId_;}
-    void setClientId(const QString& v) {clientId_ = v;}
-
-    QString clientSecret() const {return clientSecret_;}
-    void setClientSecret(const QString& v) {clientSecret_ = v;}
-
     QString scope() const {return scope_;}
     void setScope(const QString& v) {scope_ = v;}
     void setScope(AccessScopes);
@@ -77,8 +71,6 @@ private slots:
     void requestAccessTokenFinished();
 
 private:
-    QString clientId_;
-    QString clientSecret_;
     QString scope_;
 };
 

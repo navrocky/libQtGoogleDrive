@@ -6,9 +6,11 @@
 #include <QDateTime>
 #include <QList>
 
+/*! \namespace Google Drive namespace */
 namespace GoogleDrive
 {
 
+/*! \brief File information */
 class FileInfo
 {
 public:
@@ -31,6 +33,11 @@ private:
     QVariantMap data_;
 };
 
+/*! \typedef FileInfoList
+    \brief List of information files.
+
+sdfasdfasdfasdf
+*/
 typedef QList<FileInfo> FileInfoList;
 
 }
