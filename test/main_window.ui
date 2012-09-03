@@ -56,6 +56,7 @@
     </property>
     <addaction name="actionLogin"/>
     <addaction name="actionGet_file_list"/>
+    <addaction name="actionDownload_file"/>
    </widget>
    <addaction name="menuLogin"/>
    <addaction name="menuOperations"/>
@@ -100,6 +101,11 @@
   <action name="action_3">
    <property name="text">
     <string>--</string>
+   </property>
+  </action>
+  <action name="actionDownload_file">
+   <property name="text">
+    <string>Download file</string>
    </property>
   </action>
  </widget>

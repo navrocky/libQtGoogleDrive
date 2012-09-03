@@ -20,6 +20,7 @@ set(HEADERS
     command_refresh_token.h
     command_oauth2.h
     command_file_list.h
+    command_download_file.h
 )
 
 set(MOC_HEADERS
@@ -30,6 +31,7 @@ set(MOC_HEADERS
     command_refresh_token.h
     command_oauth2.h
     command_file_list.h
+    command_download_file.h
 )
 
 set(SOURCES
@@ -41,6 +43,7 @@ set(SOURCES
     command_refresh_token.cpp
     command_oauth2.cpp
     command_file_list.cpp
+    command_download_file.cpp
 )
 
 set(DEPS

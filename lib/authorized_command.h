@@ -6,6 +6,9 @@
 namespace GoogleDrive
 {
 
+/**
+ * @brief Base class of all commands for which authorization is necessary.
+ */
 class AuthorizedCommand : public Command
 {
     Q_OBJECT
@@ -13,8 +16,9 @@ public:
     AuthorizedCommand(Session* session);
 
 signals:
-    /*! This signal is emitted when full reauthorization is needed.
-     *  \param reason - reauthorization reason.
+    /**
+     * This signal is emitted when full reauthorization is needed.
+     * @param reason reauthorization reason.
      */
     void reauthorizationNeeded(const QString& reason);
 

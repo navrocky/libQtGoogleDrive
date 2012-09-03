@@ -6,19 +6,20 @@
 #include <QDateTime>
 #include <QList>
 
-/*! \namespace Google Drive namespace */
 namespace GoogleDrive
 {
 
-/*! \brief File information */
+/**
+* @brief File information
+*/
 class FileInfo
 {
 public:
     explicit FileInfo(const QVariantMap& data);
     explicit FileInfo(const FileInfo& src);
+    ~FileInfo();
 
-    QVariantMap rawData() const {return data_;}
-
+    QVariantMap rawData() const;
     QString id() const;
     QString title() const;
     QString mimeType() const;
@@ -28,15 +29,17 @@ public:
     QDateTime modifiedByMeDate() const;
     QDateTime lastViewedByMeDate() const;
     bool isEditable() const;
+    QUrl downloadUrl() const;
 
 private:
-    QVariantMap data_;
+    struct Impl;
+    Impl* d;
+//    QVariantMap data_;
 };
 
-/*! \typedef FileInfoList
-    \brief List of information files.
-
-sdfasdfasdfasdf
+/**
+* @typedef FileInfoList
+* @brief List of information files.
 */
 typedef QList<FileInfo> FileInfoList;
 

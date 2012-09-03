@@ -33,6 +33,10 @@ private slots:
     void authFinished();
     void getFileList();
     void getFileListFinished(const GoogleDrive::FileInfoList& list);
+
+    void downloadFile();
+    void downloadFileFinished();
+    void downloadProgress(qint64 v);
     
 private:
     void writeInfo(const QString& msg, bool time = true);

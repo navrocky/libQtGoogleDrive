@@ -22,6 +22,11 @@ void CommandFileList::exec(const QString &query)
     executeQuery();
 }
 
+void CommandFileList::execForFolder(const QString& folderId)
+{
+    exec(QString("'%1' in parents"));
+}
+
 void CommandFileList::queryFinished()
 {
     tryAutoDelete();
@@ -49,16 +54,16 @@ void CommandFileList::queryFinished()
 
 void CommandFileList::reexecuteQuery()
 {
-    QString queryStr = !query_.isEmpty() ? QString("?q='%1'").arg(query_) : QString();
+    QString queryStr = !query_.isEmpty() ? QString("&q='%1'").arg(query_) : QString();
     QString url = QString("https://www.googleapis.com/drive/v2/files?access_token=%1%2")
             .arg(session()->accessToken())
             .arg(queryStr);
 
     QNetworkRequest request(url);
-    request.setHeader (QNetworkRequest::ContentTypeHeader,
+    request.setHeader(QNetworkRequest::ContentTypeHeader,
                        "application/x-www-form-urlencoded");
 
-    QNetworkReply *reply = session()->networkManager()->get(request);
+    QNetworkReply* reply = session()->networkManager()->get(request);
     connect(reply, SIGNAL(finished()), this, SLOT(queryFinished()));
 }
 

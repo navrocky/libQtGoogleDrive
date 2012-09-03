@@ -1,31 +1,53 @@
 #include "file_info.h"
 
+#include <QUrl>
+
 namespace GoogleDrive
 {
 
-FileInfo::FileInfo(const QVariantMap &data)
-    : data_(data)
+struct FileInfo::Impl
+{
+    Impl(const QVariantMap& d)
+        : data(d)
+    {
+    }
+
+    QVariantMap data;
+};
+
+FileInfo::FileInfo(const QVariantMap& data)
+    : d(new Impl(data))
 {
 }
 
 FileInfo::FileInfo(const FileInfo &src)
-    : data_(src.data_)
+    : d(new Impl(src.d->data))
 {
+}
+
+FileInfo::~FileInfo()
+{
+    delete d;
+}
+
+QVariantMap FileInfo::rawData() const
+{
+    return d->data;
 }
 
 QString FileInfo::id() const
 {
-    return data_["id"].toString();
+    return d->data["id"].toString();
 }
 
 QString FileInfo::title() const
 {
-    return data_["title"].toString();
+    return d->data["title"].toString();
 }
 
 QString FileInfo::mimeType() const
 {
-    return data_["mimeType"].toString();
+    return d->data["mimeType"].toString();
 }
 
 bool FileInfo::isFolder() const
@@ -35,27 +57,32 @@ bool FileInfo::isFolder() const
 
 QDateTime FileInfo::createdDate() const
 {
-    return QDateTime::fromString(data_["createdDate"].toString(), Qt::ISODate);
+    return QDateTime::fromString(d->data["createdDate"].toString(), Qt::ISODate);
 }
 
 QDateTime FileInfo::modifiedDate() const
 {
-    return QDateTime::fromString(data_["modifiedDate"].toString(), Qt::ISODate);
+    return QDateTime::fromString(d->data["modifiedDate"].toString(), Qt::ISODate);
 }
 
 QDateTime FileInfo::modifiedByMeDate() const
 {
-    return QDateTime::fromString(data_["modifiedByMeDate"].toString(), Qt::ISODate);
+    return QDateTime::fromString(d->data["modifiedByMeDate"].toString(), Qt::ISODate);
 }
 
 QDateTime FileInfo::lastViewedByMeDate() const
 {
-    return QDateTime::fromString(data_["lastViewedByMeDate"].toString(), Qt::ISODate);
+    return QDateTime::fromString(d->data["lastViewedByMeDate"].toString(), Qt::ISODate);
 }
 
 bool FileInfo::isEditable() const
 {
-    return data_["editable"].toBool();
+    return d->data["editable"].toBool();
+}
+
+QUrl FileInfo::downloadUrl() const
+{
+    return QUrl(d->data["downloadUrl"].toString());
 }
 
 }

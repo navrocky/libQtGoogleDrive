@@ -19,6 +19,10 @@ public slots:
     /*! \see about query https://developers.google.com/drive/search-parameters */
     void exec(const QString& query = QString());
 
+    /*! Get specified folder file list. The root folder id can be obtained by
+        CommandAbout */
+    void execForFolder(const QString& folderId);
+
 signals:
     void finished(const GoogleDrive::FileInfoList& files);
 
