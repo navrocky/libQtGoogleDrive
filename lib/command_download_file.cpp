@@ -8,6 +8,10 @@
 #include <QByteArray>
 
 #include "session.h"
+#include "defines.h"
+#include "tools.h"
+
+using namespace GoogleDrive::Internal;
 
 namespace GoogleDrive
 {
@@ -16,11 +20,9 @@ struct CommandDownloadFile::Impl
 {
     Impl()
         : bufferSize(16*1024)
-        , received(0)
     {}
 
     qint64 bufferSize;
-    qint64 received;
     QUrl downloadUrl;
     QPointer<QIODevice> out;
 };
@@ -46,11 +48,6 @@ void CommandDownloadFile::setBufferSize(qint64 v)
     d->bufferSize = v;
 }
 
-qint64 CommandDownloadFile::received() const
-{
-    return d->received;
-}
-
 void CommandDownloadFile::exec(const QUrl &downloadUrl, QIODevice *out)
 {
     d->downloadUrl = downloadUrl;
@@ -60,17 +57,13 @@ void CommandDownloadFile::exec(const QUrl &downloadUrl, QIODevice *out)
 
 void CommandDownloadFile::reexecuteQuery()
 {
-    QString str = QString("%1&access_token=%2")
-            .arg(d->downloadUrl.toString())
-            .arg(session()->accessToken());
-
-    QUrl url(str);
-
-    QNetworkRequest request( url );
+    QNetworkRequest request( d->downloadUrl );
+    setRequestAccessToken(request, session()->accessToken());
     QNetworkReply* reply = session()->networkManager()->get(request);
     reply->setReadBufferSize(d->bufferSize);
     connect(reply, SIGNAL(finished()), SLOT(requestFinished()));
     connect(reply, SIGNAL(readyRead()), SLOT(readyRead()));
+    connect(reply, SIGNAL(downloadProgress(qint64,qint64)), SIGNAL(progress(qint64,qint64)));
 }
 
 void CommandDownloadFile::requestFinished()
@@ -79,6 +72,12 @@ void CommandDownloadFile::requestFinished()
     Q_ASSERT(reply);
     if (!reply)
         return;
+
+    if (reply->error() == QNetworkReply::AuthenticationRequiredError)
+    {
+        refreshToken();
+        return;
+    }
 
     if (checkInvalidReplyAndRefreshToken(reply))
         return;
@@ -99,8 +98,6 @@ void CommandDownloadFile::readyRead()
 
     QIODevice* out = d->out;
     out->write(ba);
-    d->received += sz;
-    emit progress(d->received);
 }
 
 }

@@ -12,6 +12,8 @@ INCLUDE_DIRECTORIES (
 )
 
 set(HEADERS
+    defines.h
+    tools.h
     drive_manager.h
     session.h
     file_info.h
@@ -21,6 +23,7 @@ set(HEADERS
     command_oauth2.h
     command_file_list.h
     command_download_file.h
+    command_upload_file.h
 )
 
 set(MOC_HEADERS
@@ -32,9 +35,11 @@ set(MOC_HEADERS
     command_oauth2.h
     command_file_list.h
     command_download_file.h
+    command_upload_file.h
 )
 
 set(SOURCES
+    tools.cpp
     drive_manager.cpp
     session.cpp
     file_info.cpp
@@ -44,6 +49,7 @@ set(SOURCES
     command_oauth2.cpp
     command_file_list.cpp
     command_download_file.cpp
+    command_upload_file.cpp
 )
 
 set(DEPS

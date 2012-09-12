@@ -12,10 +12,12 @@
 #include <QStatusBar>
 #include <QtDebug>
 #include <QFile>
+#include <QBuffer>
 
 #include "../lib/command_oauth2.h"
 #include "../lib/command_file_list.h"
 #include "../lib/command_download_file.h"
+#include "../lib/command_upload_file.h"
 
 #include "options_dialog.h"
 #include "ui_main_window.h"
@@ -34,6 +36,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionGet_file_list, SIGNAL(triggered()), SLOT(getFileList()));
     connect(ui->actionEdit_options, SIGNAL(triggered()), SLOT(showOptionsDialog()));
     connect(ui->actionDownload_file, SIGNAL(triggered()), SLOT(downloadFile()));
+    connect(ui->actionUpload_simple_file, SIGNAL(triggered()), SLOT(uploadSimpleFile()));
     writeText(tr("<p><h1>Welcome to the Qt Google Drive API test</h1></p><br>"));
 
     QSettings s;
@@ -165,21 +168,19 @@ void MainWindow::getFileListFinished(const FileInfoList& list)
     writeHint(tr("File list aquired"));
     foreach (const FileInfo& fi, list)
     {
-        writeInfo(fi.title());
+        writeInfo(QString("%1 size=%2 id=%3").arg(fi.title()).arg(fi.fileSize()).arg(fi.id()));
     }
 }
 
 void MainWindow::downloadFile()
 {
-
-
     CommandDownloadFile* cmd = new CommandDownloadFile(session_);
     cmd->setAutoDelete(true);
     QFile* f = new QFile("downloaded.file", cmd);
     f->open(QFile::WriteOnly);
     connect(cmd, SIGNAL(finished()), SLOT(downloadFileFinished()));
-    connect(cmd, SIGNAL(progress(qint64)), SLOT(downloadProgress(qint64)));
-    cmd->exec(QUrl("https://doc-0o-a8-docs.googleusercontent.com/docs/securesc/c01rdi4mpormcu350sf2rcrekuvrj182/l1psq31tt4aki2ahnomn8qh3ju00tbfd/1346702400000/07864899089838459059/07864899089838459059/0B0M_HQIvDuFDMkRyV3ByTnVaV2M?h=16653014193614665626&e=download&gd=true")
+    connect(cmd, SIGNAL(progress(qint64,qint64)), SLOT(downloadProgress(qint64,qint64)));
+    cmd->exec(QUrl("https://doc-0o-a8-docs.googleusercontent.com/docs/securesc/c01rdi4mpormcu350sf2rcrekuvrj182/r924s40aegfumc5rriq57ql5s2co7p2c/1346868000000/07864899089838459059/07864899089838459059/0B0M_HQIvDuFDMkRyV3ByTnVaV2M?h=16653014193614665626&e=download&gd=true")
               , f);
 }
 
@@ -188,9 +189,35 @@ void MainWindow::downloadFileFinished()
     writeHint("finished");
 }
 
-void MainWindow::downloadProgress(qint64 v)
+void MainWindow::downloadProgress(qint64 v, qint64 total)
 {
-    writeHint(tr("download progress: %1").arg(v));
+    writeHint(tr("download progress: %1 from %2").arg(v).arg(total));
+}
+
+void MainWindow::uploadSimpleFile()
+{
+    CommandUploadFile* cmd = new CommandUploadFile(session_);
+    cmd->setAutoDelete(true);
+    connect(cmd, SIGNAL(finished(GoogleDrive::FileInfo)), SLOT(uploadSimpleFileFinished(GoogleDrive::FileInfo)));
+    connect(cmd, SIGNAL(progress(qint64,qint64)), SLOT(uploadSimpleProgress(qint64,qint64)));
+    FileInfo fi;
+    fi.setTitle("test file.txt");
+    QBuffer* buf = new QBuffer(cmd);
+    buf->open(QBuffer::ReadWrite);
+    buf->write(QByteArray("Test file"));
+    buf->seek(0);
+
+    cmd->exec(fi, buf);
+}
+
+void MainWindow::uploadSimpleFileFinished(const FileInfo & info)
+{
+    writeHint(tr("Uploading finished: id=%1").arg(info.id()));
+}
+
+void MainWindow::uploadSimpleProgress(qint64 v, qint64 total)
+{
+    writeHint(tr("download progress: %1 from %2").arg(v).arg(total));
 }
 
 void MainWindow::writeInfo(const QString &msg, bool time)

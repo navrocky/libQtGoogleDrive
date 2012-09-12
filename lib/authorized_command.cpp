@@ -25,8 +25,6 @@ bool AuthorizedCommand::checkForRefreshToken(const QVariantMap& map)
 
     if (code == "403")
     {
-//        refreshToken();
-//        return true;
         // full reauthorization is needed
         refreshTokenFailed(message);
         return true;

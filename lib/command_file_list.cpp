@@ -7,6 +7,9 @@
 #include <qjson/parser.h>
 
 #include "session.h"
+#include "tools.h"
+
+using namespace GoogleDrive::Internal;
 
 namespace GoogleDrive
 {
@@ -54,14 +57,14 @@ void CommandFileList::queryFinished()
 
 void CommandFileList::reexecuteQuery()
 {
-    QString queryStr = !query_.isEmpty() ? QString("&q='%1'").arg(query_) : QString();
-    QString url = QString("https://www.googleapis.com/drive/v2/files?access_token=%1%2")
-            .arg(session()->accessToken())
+    QString queryStr = !query_.isEmpty() ? QString("?q='%1'").arg(query_) : QString();
+    QString url = QString("https://www.googleapis.com/drive/v2/files%1")
             .arg(queryStr);
 
     QNetworkRequest request(url);
     request.setHeader(QNetworkRequest::ContentTypeHeader,
                        "application/x-www-form-urlencoded");
+    setRequestAccessToken(request, session()->accessToken());
 
     QNetworkReply* reply = session()->networkManager()->get(request);
     connect(reply, SIGNAL(finished()), this, SLOT(queryFinished()));

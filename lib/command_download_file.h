@@ -9,9 +9,9 @@ class QUrl;
 namespace GoogleDrive
 {
 
-// TODO Download realization with Partial GET
+// TODO: Download realization with Partial GET
 /**
- * @brief Download file command
+ * @brief Download file content
  */
 class CommandDownloadFile : public AuthorizedCommand
 {
@@ -22,28 +22,34 @@ public:
 
     /**
      * This method returns current receive buffer size. By default receive buffer
-     * size is 16 Kb.
+     * size is 16 kB.
      * @sa setBufferSize
      */
     qint64 bufferSize() const;
 
     /**
-     * This method change receive buffer size.
+     * This method change receive buffer size. Default buffer size is 16 kB
      * @param size new receive buffer size
      * @sa bufferSize
      */
     void setBufferSize(qint64 size);
 
-    /**
-     * This method returns total amount of received data in bytes.
-     */
-    qint64 received() const;
-
 public slots:
+    /**
+     * Start downloading process.
+     * @param downloadUrl download or export url provided by FileInfo::downloadUrl
+     * @param out output device for storing received file content. It can be a
+     *        QFile, QBuffer, etc.
+     */
     void exec(const QUrl& downloadUrl, QIODevice* out);
 
 signals:
-    void progress(qint64 bytesReceived);
+    /**
+     * This signal is emitted during downloading process.
+     * @param bytesReceived current amount of received data
+     * @param total total amount of data to be received
+     */
+    void progress(qint64 bytesReceived, qint64 total);
 
     /**
      * This signal emits when all of the file data were successfully received.

@@ -6,14 +6,14 @@
 namespace GoogleDrive
 {
 
-/*!
-\internal
-\brief Internal command.
-
-This command refreshing access token using refresh token.
-
-\attention You shouldn't use this command directly.
-*/
+/**
+ * @internal
+ * @brief Internal command.
+ *
+ * This command refreshing access token using refresh token.
+ *
+ * @attention You shouldn't use this command directly.
+ */
 class CommandRefreshToken : public Command
 {
     Q_OBJECT

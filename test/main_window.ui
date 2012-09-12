@@ -57,6 +57,7 @@
     <addaction name="actionLogin"/>
     <addaction name="actionGet_file_list"/>
     <addaction name="actionDownload_file"/>
+    <addaction name="actionUpload_simple_file"/>
    </widget>
    <addaction name="menuLogin"/>
    <addaction name="menuOperations"/>
@@ -106,6 +107,11 @@
   <action name="actionDownload_file">
    <property name="text">
     <string>Download file</string>
+   </property>
+  </action>
+  <action name="actionUpload_simple_file">
+   <property name="text">
+    <string>Upload simple file</string>
    </property>
   </action>
  </widget>
