@@ -93,6 +93,7 @@ void CommandUploadFile::requestFinished()
     FileInfo fileInfo(res.toMap());
 
     emit finished(fileInfo);
+    emitFinished();
 }
 
 void CommandUploadFile::multipartUpload()
