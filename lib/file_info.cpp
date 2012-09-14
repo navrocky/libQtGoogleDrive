@@ -80,6 +80,11 @@ bool FileInfo::isFolder() const
 {
     return mimeType() == "application/vnd.google-apps.folder";
 }
+bool FileInfo::isRoot() const
+{
+    //FIXME works strange
+    return d->data.value("parents").toList().isEmpty();
+}
 
 QDateTime FileInfo::createdDate() const
 {
