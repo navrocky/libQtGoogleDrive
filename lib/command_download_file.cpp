@@ -6,19 +6,22 @@
 #include <QNetworkReply>
 #include <QUrl>
 #include <QByteArray>
+#include <QPointer>
 
 #include "session.h"
 #include "defines.h"
 #include "tools.h"
+#include "command_private.h"
 
 using namespace GoogleDrive::Internal;
 
 namespace GoogleDrive
 {
 
-struct CommandDownloadFile::Impl
+class CommandDownloadFilePrivate : public CommandPrivate
 {
-    Impl()
+public:
+    CommandDownloadFilePrivate()
         : bufferSize(16*1024)
     {}
 
@@ -28,28 +31,26 @@ struct CommandDownloadFile::Impl
 };
 
 CommandDownloadFile::CommandDownloadFile(Session* session)
-    : AuthorizedCommand(session)
-    , d(new Impl)
+    : AuthorizedCommand(new CommandDownloadFilePrivate, session)
 {
 }
 
-CommandDownloadFile::~CommandDownloadFile()
-{
-    delete d;
-}
 
 qint64 CommandDownloadFile::bufferSize() const
 {
+    Q_D(const CommandDownloadFile);
     return d->bufferSize;
 }
 
 void CommandDownloadFile::setBufferSize(qint64 v)
 {
+    Q_D(CommandDownloadFile);
     d->bufferSize = v;
 }
 
 void CommandDownloadFile::exec(const QUrl &downloadUrl, QIODevice *out)
 {
+    Q_D(CommandDownloadFile);
     d->downloadUrl = downloadUrl;
     d->out = out;
     executeQuery();
@@ -57,6 +58,7 @@ void CommandDownloadFile::exec(const QUrl &downloadUrl, QIODevice *out)
 
 void CommandDownloadFile::reexecuteQuery()
 {
+    Q_D(CommandDownloadFile);
     QNetworkRequest request( d->downloadUrl );
     setRequestAccessToken(request, session()->accessToken());
     QNetworkReply* reply = session()->networkManager()->get(request);
@@ -82,12 +84,13 @@ void CommandDownloadFile::requestFinished()
     if (checkInvalidReplyAndRefreshToken(reply))
         return;
 
-    emit finished();
-    emitFinished();
+    emitSuccess();
 }
 
 void CommandDownloadFile::readyRead()
 {
+    Q_D(CommandDownloadFile);
+
     QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
     Q_ASSERT(reply);
     if (!reply)

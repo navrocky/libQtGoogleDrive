@@ -25,21 +25,19 @@ public:
 private slots:
     void started(GoogleDrive::Command* cmd);
     void finished(GoogleDrive::Command* cmd);
-    void error(GoogleDrive::Command* cmd, const QString& msg);
-    void reauthorizationNeeded(GoogleDrive::Command* cmd, const QString& msg);
 
     void showOptionsDialog();
     void login();
     void authFinished();
     void getFileList();
-    void getFileListFinished(const GoogleDrive::FileInfoList& list);
+    void getFileListFinished();
 
     void downloadFile();
     void downloadFileFinished();
     void downloadProgress(qint64 v, qint64 total);
     
     void uploadSimpleFile();
-    void uploadSimpleFileFinished(const GoogleDrive::FileInfo&);
+    void uploadSimpleFileFinished();
     void uploadSimpleProgress(qint64 v, qint64 total);
 
 private:

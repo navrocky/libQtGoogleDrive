@@ -57,12 +57,6 @@ MainWindow::MainWindow(QWidget *parent)
     connect(session_,
             SIGNAL(finished(GoogleDrive::Command*)),
             SLOT(finished(GoogleDrive::Command*)));
-    connect(session_,
-            SIGNAL(error(GoogleDrive::Command*,QString)),
-            SLOT(error(GoogleDrive::Command*,QString)));
-    connect(session_,
-            SIGNAL(reauthorizationNeeded(GoogleDrive::Command*,QString)),
-            SLOT(reauthorizationNeeded(GoogleDrive::Command*,QString)));
 }
 
 MainWindow::~MainWindow()
@@ -80,6 +74,8 @@ void MainWindow::finished(Command *cmd)
 {
     executingCommands_.remove(cmd);
     updateStatusBar();
+    if (cmd->error() != Command::NoError)
+        writeError(cmd->errorString());
 }
 
 void MainWindow::showOptionsDialog()
@@ -98,14 +94,13 @@ void MainWindow::showOptionsDialog()
 
 void MainWindow::login()
 {
-    QSettings s;
     QString clientId = session_->clientId();
     QString clientSecret = session_->clientSecret();
     if (clientId.isEmpty() || clientSecret.isEmpty())
     {
         QMessageBox mb(QMessageBox::Warning, tr("Your options is incompleted"),
                              tr("<p>Firstly you must specify your application ClientID and ClientSecret in the options dialog.</p>"));
-        mb.setParent(this);
+//        mb.setParent(this);
         mb.setInformativeText("<p>Read more <a href=\"https://developers.google.com/drive/quickstart#enable_the_drive_api\">https://developers.google.com/drive/quickstart#enable_the_drive_api</a></p>");
         mb.setTextFormat(Qt::RichText);
         mb.exec();
@@ -139,34 +134,22 @@ void MainWindow::authFinished()
               .arg(session_->refreshToken()));
 }
 
-void MainWindow::error(GoogleDrive::Command* cmd, const QString &msg)
-{
-    writeError(msg);
-    executingCommands_.remove(cmd);
-    updateStatusBar();
-}
-
-void MainWindow::reauthorizationNeeded(Command *cmd, const QString &msg)
-{
-    writeError(tr("Reauthorization needed: %1").arg(msg));
-    executingCommands_.remove(cmd);
-    updateStatusBar();
-}
-
 void MainWindow::getFileList()
 {
     CommandFileList* cmd = new CommandFileList(session_);
     cmd->setAutoDelete(true);
-    connect(cmd,
-            SIGNAL(finished(GoogleDrive::FileInfoList)),
-            SLOT(getFileListFinished(GoogleDrive::FileInfoList)));
+    connect(cmd, SIGNAL(finished()), SLOT(getFileListFinished()));
     cmd->exec();
 }
 
-void MainWindow::getFileListFinished(const FileInfoList& list)
+void MainWindow::getFileListFinished()
 {
+    CommandFileList* cmd = qobject_cast<CommandFileList*>(sender());
+    if (cmd->error() != Command::NoError)
+        return;
+
     writeHint(tr("File list aquired"));
-    foreach (const FileInfo& fi, list)
+    foreach (const FileInfo& fi, cmd->files())
     {
         writeInfo(QString("%1 size=%2 id=%3").arg(fi.title()).arg(fi.fileSize()).arg(fi.id()));
     }
@@ -186,7 +169,9 @@ void MainWindow::downloadFile()
 
 void MainWindow::downloadFileFinished()
 {
-    writeHint("finished");
+    CommandDownloadFile* cmd = qobject_cast<CommandDownloadFile*>(sender());
+    if (cmd->error() == Command::NoError)
+        writeHint("finished");
 }
 
 void MainWindow::downloadProgress(qint64 v, qint64 total)
@@ -198,7 +183,7 @@ void MainWindow::uploadSimpleFile()
 {
     CommandUploadFile* cmd = new CommandUploadFile(session_);
     cmd->setAutoDelete(true);
-    connect(cmd, SIGNAL(finished(GoogleDrive::FileInfo)), SLOT(uploadSimpleFileFinished(GoogleDrive::FileInfo)));
+    connect(cmd, SIGNAL(finished()), SLOT(uploadSimpleFileFinished()));
     connect(cmd, SIGNAL(progress(qint64,qint64)), SLOT(uploadSimpleProgress(qint64,qint64)));
     FileInfo fi;
     fi.setTitle("test file.txt");
@@ -210,9 +195,11 @@ void MainWindow::uploadSimpleFile()
     cmd->exec(fi, buf);
 }
 
-void MainWindow::uploadSimpleFileFinished(const FileInfo & info)
+void MainWindow::uploadSimpleFileFinished()
 {
-    writeHint(tr("Uploading finished: id=%1").arg(info.id()));
+    CommandUploadFile* cmd = qobject_cast<CommandUploadFile*>(sender());
+    if (cmd->error() == Command::NoError)
+        writeHint(tr("Uploading finished: id=%1").arg(cmd->resultFileInfo().id()));
 }
 
 void MainWindow::uploadSimpleProgress(qint64 v, qint64 total)

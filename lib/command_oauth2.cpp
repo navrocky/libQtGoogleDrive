@@ -106,8 +106,8 @@ void CommandOAuth2::requestAccessTokenFinished()
     QString refreshToken = map["refresh_token"].toString();
     if (accessToken.isEmpty() || refreshToken.isEmpty())
     {
-        emitError(tr("Access or refresh token is empty in reply to \"%1\"")
-                   .arg(reply->url().toString()));
+        emitError(UnknownError, tr("Access or refresh token is empty in reply to \"%1\"")
+                  .arg(reply->url().toString()));
         return;
     }
 
@@ -115,7 +115,7 @@ void CommandOAuth2::requestAccessTokenFinished()
     session()->setRefreshToken(refreshToken);
 
     emit finished();
-    emitFinished();
+    emitSuccess();
 }
 
 }

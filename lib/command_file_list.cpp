@@ -8,20 +8,35 @@
 
 #include "session.h"
 #include "tools.h"
+#include "command_private.h"
 
 using namespace GoogleDrive::Internal;
 
 namespace GoogleDrive
 {
 
-CommandFileList::CommandFileList(Session *session)
-    : AuthorizedCommand(session)
+class CommandFileListPrivate : public CommandPrivate
 {
+public:
+    FileInfoList files;
+    QString query;
+};
+
+CommandFileList::CommandFileList(Session *session)
+    : AuthorizedCommand(new CommandFileListPrivate, session)
+{
+}
+
+FileInfoList CommandFileList::files() const
+{
+    Q_D(const CommandFileList);
+    return d->files;
 }
 
 void CommandFileList::exec(const QString &query)
 {
-    query_ = query;
+    Q_D(CommandFileList);
+    d->query = query;
     executeQuery();
 }
 
@@ -32,6 +47,7 @@ void CommandFileList::execForFolder(const QString& folderId)
 
 void CommandFileList::queryFinished()
 {
+    Q_D(CommandFileList);
     tryAutoDelete();
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (!reply)
@@ -45,19 +61,19 @@ void CommandFileList::queryFinished()
     if (!parseJsonReply(reply, map))
         return;
 
-    files_.clear();
+    d->files.clear();
     foreach (const QVariant& item, map["items"].toList ())
     {
-        files_ << FileInfo(item.toMap());
+        d->files << FileInfo(item.toMap());
     }
 
-    emit finished(files_);
-    emitFinished();
+    emitSuccess();
 }
 
 void CommandFileList::reexecuteQuery()
 {
-    QString queryStr = !query_.isEmpty() ? QString("?q='%1'").arg(query_) : QString();
+    Q_D(CommandFileList);
+    QString queryStr = !d->query.isEmpty() ? QString("?q='%1'").arg(d->query) : QString();
     QString url = QString("https://www.googleapis.com/drive/v2/files%1")
             .arg(queryStr);
 

@@ -15,13 +15,6 @@ class AuthorizedCommand : public Command
 public:
     AuthorizedCommand(Session* session);
 
-signals:
-    /**
-     * This signal is emitted when full reauthorization is needed.
-     * @param reason reauthorization reason.
-     */
-    void reauthorizationNeeded(const QString& reason);
-
 protected:
     void executeQuery();
     virtual void reexecuteQuery() = 0;
@@ -30,9 +23,10 @@ protected:
     bool checkInvalidReplyAndRefreshToken(QNetworkReply* reply);
     void refreshToken();
 
+    AuthorizedCommand(CommandPrivate*, Session*);
+
 private slots:
     void refreshTokenFinished();
-    void refreshTokenFailed(const QString&);
 };
 
 }

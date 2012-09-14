@@ -62,7 +62,7 @@ public:
     /**
      * Returns OAuth2 dialog url. You have to open this url in the web browser
      * for further authorization steps.
-     * \sa QDesktopServices::openUrl
+     * @sa QDesktopServices::openUrl
      */
     QUrl getLoginUrl() const;
 
@@ -70,7 +70,7 @@ signals:
     /**
      * Signal emitted when requestAuthToken() query returns valid refresh token
      * and access token.
-     * \sa requestAccessToken()
+     * @sa requestAccessToken()
      */
     void finished();
 
@@ -79,7 +79,7 @@ public slots:
      * Requesting refresh and access tokens using authorization code retrieved
      * from browser. Signal finished() emitting when request finished
      * successfully otherwise error() emitted.
-     * \sa emit(), Command::error()
+     * @sa emit(), Command::error()
      */
     void requestAccessToken(const QString& authCode);
 

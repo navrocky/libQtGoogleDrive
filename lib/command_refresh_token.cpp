@@ -21,17 +21,17 @@ void CommandRefreshToken::exec()
 
     if (refreshToken.isEmpty())
     {
-        emitError(tr("Refresh token is empty"));
+        emitError(UnknownError, tr("Refresh token is empty"));
         return;
     }
     if (clientId.isEmpty())
     {
-        emitError(tr("Client ID is empty"));
+        emitError(UnknownError, tr("Client ID is empty"));
         return;
     }
     if (clientSecret.isEmpty())
     {
-        emitError(tr("Client secret is empty"));
+        emitError(UnknownError, tr("Client secret is empty"));
         return;
     }
 
@@ -67,13 +67,13 @@ void CommandRefreshToken::queryFinished()
     QString accessToken = map["access_token"].toString();
     if (accessToken.isEmpty())
     {
-        emitError(tr("Empty access token in reply"));
+        emitError(UnknownError, tr("Empty access token in reply"));
         return;
     }
 
     session()->setAccessToken(accessToken);
-    emit finished();
-    emitFinished();
+
+    emitSuccess();
 }
 
 }

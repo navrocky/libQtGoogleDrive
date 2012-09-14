@@ -5,8 +5,15 @@
 #include "command_refresh_token.h"
 #include "session.h"
 
+Q_DECLARE_METATYPE(GoogleDrive::CommandRefreshToken*)
+
 namespace GoogleDrive
 {
+
+namespace
+{
+const char* cRefreshCommand = "RefreshCommand";
+}
 
 AuthorizedCommand::AuthorizedCommand(Session* session)
     : Command(session)
@@ -26,7 +33,7 @@ bool AuthorizedCommand::checkForRefreshToken(const QVariantMap& map)
     if (code == "403")
     {
         // full reauthorization is needed
-        refreshTokenFailed(message);
+        emitError(AuthorizationNeeded, message);
         return true;
     }
 
@@ -51,27 +58,34 @@ bool AuthorizedCommand::checkInvalidReplyAndRefreshToken(QNetworkReply *reply)
         if (checkJsonReplyError(map))
             return true;
     }
-    emitError(reply->errorString());
+    emitError(UnknownError, reply->errorString());
     return true;
 }
 
 void AuthorizedCommand::refreshToken()
 {
-    CommandRefreshToken* cmd = new CommandRefreshToken(session());
+    CommandRefreshToken* cmd = session()->property(cRefreshCommand).value<CommandRefreshToken*>();
+    if (!cmd)
+    {
+        cmd = new CommandRefreshToken(session());
+        cmd->exec();
+        session()->setProperty(cRefreshCommand, QVariant::fromValue(cmd));
+    }
     connect(cmd, SIGNAL(finished()), SLOT(refreshTokenFinished()));
-    connect(cmd, SIGNAL(error(QString)), SLOT(refreshTokenFailed(QString)));
-    cmd->exec();
+}
+
+AuthorizedCommand::AuthorizedCommand(CommandPrivate* d, Session* s)
+    : Command(d, s)
+{
 }
 
 void AuthorizedCommand::refreshTokenFinished()
 {
-    reexecuteQuery();
-}
-
-void AuthorizedCommand::refreshTokenFailed(const QString& reason)
-{
-    emit session()->reauthorizationNeeded(this, reason);
-    emit reauthorizationNeeded(reason);
+    CommandRefreshToken* cmd = qobject_cast<CommandRefreshToken*>(sender());
+    if (cmd->error() == NoError)
+        reexecuteQuery();
+    else
+        emitError(AuthorizationNeeded, cmd->errorString());
 }
 
 void AuthorizedCommand::executeQuery()
@@ -80,7 +94,8 @@ void AuthorizedCommand::executeQuery()
     if (session()->accessToken().isEmpty())
     {
         if (session()->refreshToken().isEmpty())
-            refreshTokenFailed(tr("Refresh token is empty, you should to process authorization."));
+            emitError(AuthorizationNeeded, tr("Refresh token is empty, "
+                                              "you should to process authorization."));
         else
             refreshToken();
     }

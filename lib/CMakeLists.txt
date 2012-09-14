@@ -18,6 +18,7 @@ set(HEADERS
     session.h
     file_info.h
     command.h
+    command_private.h
     authorized_command.h
     command_refresh_token.h
     command_oauth2.h

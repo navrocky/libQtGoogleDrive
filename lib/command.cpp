@@ -5,21 +5,59 @@
 #include <qjson/parser.h>
 
 #include "session.h"
+#include "command_private.h"
 
 namespace GoogleDrive
 {
 
 Command::Command(Session* session)
     : QObject(session)
-    , session_(session)
-    , autoDelete_(false)
+    , d_ptr(new CommandPrivate)
 {
+    init();
+    Q_D(Command);
+    d->session = session;
 }
 
-void Command::emitError(const QString &msg)
+Command::~Command()
 {
-    emit error(msg);
-    emit session()->error(this, msg);
+    delete d_ptr;
+}
+
+bool Command::autoDelete() const
+{
+    Q_D(const Command);
+    return d->autoDelete;
+}
+
+void Command::setAutoDelete(bool v)
+{
+    Q_D(Command);
+    d->autoDelete = v;
+}
+
+Command::Error Command::error() const
+{
+    Q_D(const Command);
+    return d->error;
+}
+
+QString Command::errorString() const
+{
+    Q_D(const Command);
+    return d->errorString;
+}
+
+void Command::emitError(Error code, const QString &msg)
+{
+    Q_D(Command);
+    d->error = code;
+    d->errorString = msg;
+
+    emit error(code);
+    emit session()->error(this);
+    emit session()->finished(this);
+    emit finished();
     qDebug() << metaObject()->className() << "error:" << msg;
 }
 
@@ -39,7 +77,7 @@ bool Command::checkJsonReplyError(const QVariantMap& map)
     const QString& code = errorMap["code"].toString();
     const QString& msg = errorMap["message"].toString();
 
-    emitError(tr("(%1) %2").arg(code).arg(msg));
+    emitError(UnknownError, tr("(%1) %2").arg(code).arg(msg));
     return true;
 }
 
@@ -49,7 +87,7 @@ bool Command::parseJsonReply(QNetworkReply* reply, QVariantMap& map)
     QVariant res = QJson::Parser().parse(reply->readAll(), &ok);
     if (!ok)
     {
-        emitError(tr("Json reply parse error"));
+        emitError(UnknownError, tr("Json reply parse error"));
         return false;
     }
     map = res.toMap();
@@ -67,18 +105,43 @@ bool Command::checkInvalidReply(QNetworkReply *reply)
         if (checkJsonReplyError(map))
             return true;
     }
-    emitError(reply->errorString());
+    emitError(UnknownError, reply->errorString());
     return true;
 }
 
-void Command::emitFinished()
+Command::Command(CommandPrivate* d, Session *session)
+    : QObject(session)
+    , d_ptr(d)
 {
+    init();
+    d->session = session;
+}
+
+void Command::init()
+{
+    Q_D(Command);
+    d->session = 0;
+    d->autoDelete = false;
+}
+
+void Command::emitSuccess()
+{
+    Q_D(Command);
+    d->error = NoError;
+    d->errorString = QString();
+    emit finished();
     emit session()->finished(this);
 }
 
 void Command::emitStarted()
 {
     emit session()->started(this);
+}
+
+Session *Command::session() const
+{
+    Q_D(const Command);
+    return d->session;
 }
 
 }

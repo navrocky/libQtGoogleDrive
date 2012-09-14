@@ -9,6 +9,8 @@ class QUrl;
 namespace GoogleDrive
 {
 
+class CommandDownloadFilePrivate;
+
 // TODO: Download realization with Partial GET
 /**
  * @brief Download file content
@@ -18,7 +20,6 @@ class CommandDownloadFile : public AuthorizedCommand
     Q_OBJECT
 public:
     CommandDownloadFile(Session* session);
-    ~CommandDownloadFile();
 
     /**
      * This method returns current receive buffer size. By default receive buffer
@@ -51,12 +52,6 @@ signals:
      */
     void progress(qint64 bytesReceived, qint64 total);
 
-    /**
-     * This signal emits when all of the file data were successfully received.
-     * @sa error
-     */
-    void finished();
-
 protected:
     void reexecuteQuery();
 
@@ -65,8 +60,7 @@ private slots:
     void readyRead();
 
 private:
-    struct Impl;
-    Impl* d;
+    Q_DECLARE_PRIVATE(CommandDownloadFile)
 };
 
 }

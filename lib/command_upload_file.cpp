@@ -11,15 +11,17 @@
 
 #include "session.h"
 #include "tools.h"
+#include "command_private.h"
 
 using namespace GoogleDrive::Internal;
 
 namespace GoogleDrive
 {
 
-struct CommandUploadFile::Impl
+struct CommandUploadFilePrivate : public CommandPrivate
 {
-    Impl()
+public:
+    CommandUploadFilePrivate()
         : uploadType(CommandUploadFile::Multipart)
         , fileData(0)
     {
@@ -27,41 +29,47 @@ struct CommandUploadFile::Impl
 
     CommandUploadFile::UploadType uploadType;
     FileInfo fileInfo;
+    FileInfo resultFileInfo;
     QIODevice* fileData;
 };
 
 CommandUploadFile::CommandUploadFile(Session* session)
-    : AuthorizedCommand(session)
-    , d(new Impl)
+    : AuthorizedCommand(new CommandUploadFilePrivate, session)
 {
-}
-
-CommandUploadFile::~CommandUploadFile()
-{
-    delete d;
 }
 
 CommandUploadFile::UploadType CommandUploadFile::uploadType() const
 {
+    Q_D(const CommandUploadFile);
     return d->uploadType;
 }
 
 void CommandUploadFile::setUploadType(CommandUploadFile::UploadType val)
 {
+    Q_D(CommandUploadFile);
     d->uploadType = val;
+}
+
+const FileInfo &CommandUploadFile::resultFileInfo() const
+{
+    Q_D(const CommandUploadFile);
+    return d->resultFileInfo;
 }
 
 void CommandUploadFile::exec(const FileInfo &fileInfo, QIODevice* fileData)
 {
+    Q_D(CommandUploadFile);
+
     d->fileInfo = fileInfo;
     d->fileData = fileData;
 
-    qDebug() << d->fileInfo.id();
     executeQuery();
 }
 
 void CommandUploadFile::reexecuteQuery()
 {
+    Q_D(CommandUploadFile);
+
     switch (d->uploadType)
     {
         case Multipart: multipartUpload(); break;
@@ -74,6 +82,8 @@ void CommandUploadFile::reexecuteQuery()
 
 void CommandUploadFile::requestFinished()
 {
+    Q_D(CommandUploadFile);
+
     tryAutoDelete();
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (!reply)
@@ -87,17 +97,19 @@ void CommandUploadFile::requestFinished()
     QVariant res = QJson::Parser().parse(reply, &ok);
     if (!ok)
     {
-        emitError(tr("File info parse error"));
+        emitError(UnknownError, tr("File info parse error"));
         return;
     }
     FileInfo fileInfo(res.toMap());
+    d->resultFileInfo = fileInfo;
 
-    emit finished(fileInfo);
-    emitFinished();
+    emitSuccess();
 }
 
 void CommandUploadFile::multipartUpload()
 {
+    Q_D(CommandUploadFile);
+
     // prepare url
     QString id = !d->fileInfo.id().isEmpty() ?
                 QString("/%1").arg(d->fileInfo.id()) :
@@ -118,8 +130,7 @@ void CommandUploadFile::multipartUpload()
     metaPart.setBody(ba);
 
     QHttpPart dataPart;
-    QByteArray fileData = d->fileData->readAll();
-    dataPart.setBody(fileData);
+    dataPart.setBodyDevice(d->fileData);
 
     multiPart->append(metaPart);
     multiPart->append(dataPart);

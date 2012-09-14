@@ -7,6 +7,8 @@
 namespace GoogleDrive
 {
 
+class CommandUploadFilePrivate;
+
 /**
  * @brief Upload file contents
  */
@@ -26,20 +28,42 @@ public:
         /**
          * This method allows you to resume an upload operation after a
          * communication failure has interrupted the flow of data.
+         * @warning Not realized at this moment
          */
         Resumable
     };
 
     CommandUploadFile(Session* session);
-    ~CommandUploadFile();
 
     /**
      * Returns uploading type. Default value is Multipart.
      * @sa setUploadType
      */
     UploadType uploadType() const;
+
+    /**
+     * Change uploading type.
+     * @sa uploadType
+     */
     void setUploadType(UploadType);
 
+    /**
+     * Resulting file info after successfully executed command.
+     * @return FileInfo information about uploaded file.
+     */
+    const FileInfo& resultFileInfo() const;
+
+public slots:
+    /**
+     * Execute upload command. After successfully execution resultFileInfo will
+     * contain updated file information.
+     * @param fileInfo file meta information. If FileInfo::id is not empty then
+     *        command will overwrite file with specified id, otherwise the new
+     *        file will be created.
+     * @param fileData QIODevice that provides file data. Command doesn't own
+     *        this object, so it must exists during command execution.
+     * @sa finished, error, progress
+     */
     void exec(const FileInfo& fileInfo, QIODevice* fileData);
 
 signals:
@@ -50,13 +74,6 @@ signals:
      */
     void progress(qint64 bytesUploaded, qint64 total);
 
-    /**
-     * This signal emits when all of the file data were successfully uploaded.
-     * @param fileInfo returned from server file information
-     * @sa error signal
-     */
-    void finished(const GoogleDrive::FileInfo& fileInfo);
-
 protected:
     void reexecuteQuery();
 
@@ -66,8 +83,7 @@ private slots:
 private:
     void multipartUpload();
 
-    struct Impl;
-    Impl* d;
+    Q_DECLARE_PRIVATE(CommandUploadFile)
 };
 
 }

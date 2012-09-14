@@ -23,9 +23,6 @@ public:
 public slots:
     void exec();
 
-signals:
-    void finished();
-
 private slots:
     void queryFinished();
 };
