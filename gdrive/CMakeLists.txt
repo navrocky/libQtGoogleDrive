@@ -3,17 +3,20 @@ project(${TARGET})
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-find_package(Qt4 REQUIRED QtCore)
+find_package(Qt4 REQUIRED QtCore QtNetwork QtGui)
 include(${QT_USE_FILE})
 
 set(HEADERS
+    gdrive.h
 )
 
 set(MOC
+    gdrive.h
 )
 
 set(SOURCES
     main.cpp
+    gdrive.cpp
 )
 
 set(IFACES
