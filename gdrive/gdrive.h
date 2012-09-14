@@ -25,7 +25,6 @@ private slots:
     void init();
     bool refreshToken();
     void finish();
-    void error(QString message);
     
     
 private:

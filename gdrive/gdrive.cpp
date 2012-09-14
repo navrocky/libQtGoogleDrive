@@ -72,7 +72,6 @@ bool gdrive::refreshToken()
     CommandOAuth2 cmd(&p_->session);
     cmd.setScope(CommandOAuth2::FullAccessScope);
     QObject::connect(&cmd, SIGNAL(finished()), SLOT(finish()));
-    QObject::connect(&cmd, SIGNAL(error(QString)), SLOT(error(QString)));
 
     QDesktopServices::openUrl(cmd.getLoginUrl());
 
@@ -83,26 +82,27 @@ bool gdrive::refreshToken()
     cmd.requestAccessToken(code.c_str());
     
     if (p_->loop.exec() != 0)
-        throw std::runtime_error(("can't obtain refresh tocken:" + p_->error).toStdString());
+        throw std::runtime_error(("can't obtain refresh token:" + p_->error).toStdString());
 }
 
 void gdrive::finish()
 {
-    p_->loop.quit();
+    Command* cmd = qobject_cast<Command*>(sender());
+    if (cmd->error() == Command::NoError)
+    {
+        p_->loop.quit();
+    }
+    else
+    {
+        p_->error = cmd->errorString();
+        p_->loop.exit(1);
+    }
 }
-
-void gdrive::error(QString message)
-{
-    p_->error = message;
-    p_->loop.exit(1);
-}
-
 
 void gdrive::list(const variables_map& vars)
 {
     CommandFileList cmd(&p_->session);
-    QObject::connect(&cmd, SIGNAL(finished(const GoogleDrive::FileInfoList)), SLOT(finish()));
-    QObject::connect(&cmd, SIGNAL(error(QString)), SLOT(error(QString)));
+    QObject::connect(&cmd, SIGNAL(finished()), SLOT(finish()));
     
     cmd.exec();
     
