@@ -73,13 +73,12 @@ void CommandFileList::queryFinished()
 void CommandFileList::reexecuteQuery()
 {
     Q_D(CommandFileList);
-    QString queryStr = !d->query.isEmpty() ? QString("?q='%1'").arg(d->query) : QString();
-    QString url = QString("https://www.googleapis.com/drive/v2/files%1")
-            .arg(queryStr);
+
+    QUrl url("https://www.googleapis.com/drive/v2/files");
+    if (!d->query.isEmpty())
+        url.addQueryItem("q", d->query);
 
     QNetworkRequest request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader,
-                       "application/x-www-form-urlencoded");
     setRequestAccessToken(request, session()->accessToken());
 
     QNetworkReply* reply = session()->networkManager()->get(request);

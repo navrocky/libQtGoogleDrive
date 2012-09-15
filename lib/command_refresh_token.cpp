@@ -43,7 +43,7 @@ void CommandRefreshToken::exec()
             .arg(clientSecret)
             .arg("refresh_token");
 
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
+//    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
 
     QNetworkReply* reply = session()->networkManager()->post(request, str.toUtf8());
     connect(reply, SIGNAL(finished()), SLOT(queryFinished()));
