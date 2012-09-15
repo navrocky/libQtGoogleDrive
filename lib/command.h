@@ -3,7 +3,6 @@
 
 #include <QObject>
 #include <QVariant>
-#include <QScopedPointer>
 
 class QNetworkRequest;
 class QNetworkReply;
@@ -50,6 +49,14 @@ public:
     Error error() const;
     QString errorString() const;
 
+    /**
+     * This method creates local event loop and waits for a command finish.
+     * @param processUserInputEvents process user input events.
+     * @returns false if command execution was failed.
+     * @sa QEventLoop
+     */
+    bool waitForFinish(bool processUserInputEvents = true);
+
 signals:
     /**
      * Emitted when command is finished in any case (error or success).
@@ -82,8 +89,6 @@ protected:
     Command(CommandPrivate* dd, Session* session);
 
 private:
-    void init();
-
     Q_DECLARE_PRIVATE(Command)
 };
 

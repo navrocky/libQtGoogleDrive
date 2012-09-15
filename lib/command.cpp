@@ -2,6 +2,7 @@
 
 #include <QtDebug>
 #include <QNetworkReply>
+#include <QEventLoop>
 #include <qjson/parser.h>
 
 #include "session.h"
@@ -14,7 +15,6 @@ Command::Command(Session* session)
     : QObject(session)
     , d_ptr(new CommandPrivate)
 {
-    init();
     Q_D(Command);
     d->session = session;
 }
@@ -48,17 +48,29 @@ QString Command::errorString() const
     return d->errorString;
 }
 
+bool Command::waitForFinish(bool processUserInputEvents)
+{
+    Q_D(Command);
+    QEventLoop loop;
+    d->loop = &loop;
+    loop.exec(processUserInputEvents ? QEventLoop::AllEvents : QEventLoop::ExcludeUserInputEvents);
+    d->loop = 0;
+    return error() == NoError;
+}
+
 void Command::emitError(Error code, const QString &msg)
 {
     Q_D(Command);
     d->error = code;
     d->errorString = msg;
 
+    qDebug() << metaObject()->className() << "error:" << msg;
     emit error(code);
     emit session()->error(this);
     emit session()->finished(this);
     emit finished();
-    qDebug() << metaObject()->className() << "error:" << msg;
+    if (d->loop)
+        d->loop->quit();
 }
 
 void Command::tryAutoDelete()
@@ -113,15 +125,7 @@ Command::Command(CommandPrivate* d, Session *session)
     : QObject(session)
     , d_ptr(d)
 {
-    init();
     d->session = session;
-}
-
-void Command::init()
-{
-    Q_D(Command);
-    d->session = 0;
-    d->autoDelete = false;
 }
 
 void Command::emitSuccess()
@@ -131,6 +135,8 @@ void Command::emitSuccess()
     d->errorString = QString();
     emit finished();
     emit session()->finished(this);
+    if (d->loop)
+        d->loop->quit();
 }
 
 void Command::emitStarted()
