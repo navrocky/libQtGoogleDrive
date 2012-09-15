@@ -42,7 +42,7 @@ void CommandFileList::exec(const QString &query)
 
 void CommandFileList::execForFolder(const QString& folderId)
 {
-    exec(QString("'%1' in parents"));
+    exec(QString("'%1' in parents").arg(folderId));
 }
 
 void CommandFileList::queryFinished()
@@ -62,7 +62,7 @@ void CommandFileList::queryFinished()
         return;
 
     d->files.clear();
-    foreach (const QVariant& item, map["items"].toList ())
+    foreach (const QVariant& item, map.value("items").toList())
     {
         d->files << FileInfo(item.toMap());
     }
@@ -83,6 +83,7 @@ void CommandFileList::reexecuteQuery()
 
     QNetworkReply* reply = session()->networkManager()->get(request);
     connect(reply, SIGNAL(finished()), this, SLOT(queryFinished()));
+    reply->setParent(this);
 }
 
 }

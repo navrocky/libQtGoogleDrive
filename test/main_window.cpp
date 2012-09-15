@@ -110,30 +110,27 @@ void MainWindow::login()
         return;
     }
 
-    CommandOAuth2* cmd = new CommandOAuth2(session_);
-    cmd->setAutoDelete(true);
-    cmd->setScope(CommandOAuth2::FullAccessScope);
-    connect(cmd, SIGNAL(finished()), SLOT(authFinished()));
+    CommandOAuth2 cmd(session_);
+    cmd.setScope(CommandOAuth2::FullAccessScope);
 
-    QDesktopServices::openUrl(cmd->getLoginUrl());
+    QDesktopServices::openUrl(cmd.getLoginUrl());
 
     QString code = QInputDialog::getText(this, tr("Login"),
                                          tr("Enter the authorization code from web browser"));
     if (code.isEmpty())
         return;
 
-    cmd->requestAccessToken(code);
-}
-
-void MainWindow::authFinished()
-{
+    cmd.requestAccessToken(code);
+    cmd.waitForFinish(false);
     QSettings s;
     s.setValue(cRefreshToken, session_->refreshToken());
     s.setValue(cAccessToken, session_->accessToken());
 
-    writeHint(tr("Authorization finished. <br>Access token: <b>%1</b><br><br>Refresh token: <b>%2</b>")
+    writeHint(tr("Authorization finished. <br>Access token: <b>%1</b><br>Refresh token: <b>%2</b>"
+                 "<br>Access token expires in: <b>%3</b>")
               .arg(session_->accessToken())
-              .arg(session_->refreshToken()));
+              .arg(session_->refreshToken())
+              .arg(cmd.accessTokenExpiresIn()));
 }
 
 void MainWindow::about()

@@ -111,14 +111,12 @@ void CommandUploadFile::multipartUpload()
     Q_D(CommandUploadFile);
 
     // prepare url
-    QString id = !d->fileInfo.id().isEmpty() ?
-                QString("/%1").arg(d->fileInfo.id()) :
-                QString();
-
-    QString urlStr = QString("https://www.googleapis.com/upload/drive/v2/files%1?uploadType=multipart")
-            .arg(id);
+    QString urlStr("https://www.googleapis.com/upload/drive/v2/files");
+    if (!d->fileInfo.id().isEmpty())
+        urlStr += QString("/%1").arg(d->fileInfo.id());
 
     QUrl url(urlStr);
+    url.addQueryItem("uploadType", "multipart");
 
     // prepare multipart body
     QHttpMultiPart* multiPart = new QHttpMultiPart(QHttpMultiPart::RelatedType);
@@ -143,6 +141,7 @@ void CommandUploadFile::multipartUpload()
     multiPart->setParent(reply);
 
     connect(reply, SIGNAL(finished()), SLOT(requestFinished()));
+    reply->setParent(this);
 }
 
 }

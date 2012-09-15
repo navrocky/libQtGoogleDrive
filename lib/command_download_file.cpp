@@ -66,6 +66,7 @@ void CommandDownloadFile::reexecuteQuery()
     connect(reply, SIGNAL(finished()), SLOT(requestFinished()));
     connect(reply, SIGNAL(readyRead()), SLOT(readyRead()));
     connect(reply, SIGNAL(downloadProgress(qint64,qint64)), SIGNAL(progress(qint64,qint64)));
+    reply->setParent(this);
 }
 
 void CommandDownloadFile::requestFinished()

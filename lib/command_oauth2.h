@@ -9,10 +9,14 @@
 namespace GoogleDrive
 {
 
+class CommandOAuth2Private;
+
 /**
  * @brief First-time authorization
- * Authenticating users with OAuth 2.0
+ * Authenticating users with OAuth 2.0. At the moment only supported scenario
+ * for installed applications.
  * @sa https://developers.google.com/drive/about-auth
+ * @sa https://developers.google.com/accounts/docs/OAuth2InstalledApp
  */
 class CommandOAuth2 : public Command
 {
@@ -55,8 +59,8 @@ public:
 
     CommandOAuth2(Session*);
 
-    QString scope() const {return scope_;}
-    void setScope(const QString& v) {scope_ = v;}
+    QString scope() const;
+    void setScope(const QString& v);
     void setScope(AccessScopes);
 
     /**
@@ -66,20 +70,17 @@ public:
      */
     QUrl getLoginUrl() const;
 
-signals:
     /**
-     * Signal emitted when requestAuthToken() query returns valid refresh token
-     * and access token.
-     * @sa requestAccessToken()
+     * Returns number of seconds after access_token will be expired.
+     * This value is valid when the command completes.
      */
-    void finished();
+    int accessTokenExpiresIn() const;
 
 public slots:
     /**
      * Requesting refresh and access tokens using authorization code retrieved
-     * from browser. Signal finished() emitting when request finished
-     * successfully otherwise error() emitted.
-     * @sa emit(), Command::error()
+     * from browser.
+     * @sa finished, Command::error()
      */
     void requestAccessToken(const QString& authCode);
 
@@ -87,7 +88,7 @@ private slots:
     void requestAccessTokenFinished();
 
 private:
-    QString scope_;
+    Q_DECLARE_PRIVATE(CommandOAuth2)
 };
 
 }

@@ -11,17 +11,44 @@
 #include <qjson/parser.h>
 
 #include "session.h"
+#include "command_private.h"
 
 namespace GoogleDrive
 {
 
-CommandOAuth2::CommandOAuth2(Session* s)
-    : Command(s)
+class CommandOAuth2Private : public CommandPrivate
 {
+public:
+    CommandOAuth2Private()
+        : expiresIn()
+    {}
+
+    QString scope;
+    int expiresIn;
+
+};
+
+CommandOAuth2::CommandOAuth2(Session* s)
+    : Command(new CommandOAuth2Private, s)
+{
+}
+
+QString CommandOAuth2::scope() const
+{
+    Q_D(const CommandOAuth2);
+    return d->scope;
+}
+
+void CommandOAuth2::setScope(const QString &v)
+{
+    Q_D(CommandOAuth2);
+    d->scope = v;
 }
 
 void CommandOAuth2::setScope(AccessScopes scopes)
 {
+    Q_D(CommandOAuth2);
+
     QStringList sl;
     const QString prefix("https://www.googleapis.com/auth/drive");
 
@@ -40,13 +67,15 @@ void CommandOAuth2::setScope(AccessScopes scopes)
     if (scopes.testFlag(FullAccessScope))
         sl << prefix;
 
-    scope_ = sl.join("%20");
+    d->scope = sl.join(" ");
 }
 
 QUrl CommandOAuth2::getLoginUrl() const
 {
-    Q_ASSERT(!scope_.isEmpty());
-    if (scope_.isEmpty())
+    Q_D(const CommandOAuth2);
+
+    Q_ASSERT(!d->scope.isEmpty());
+    if (d->scope.isEmpty())
     {
         qCritical() << "Scope isn't specified";
         return QUrl();
@@ -59,14 +88,19 @@ QUrl CommandOAuth2::getLoginUrl() const
         return QUrl();
     }
 
-    const QString responseType("code");
-    const QString redirectUri("urn:ietf:wg:oauth:2.0:oob");
+    QUrl url("https://accounts.google.com/o/oauth2/auth");
+    url.addQueryItem("response_type", "code");
+    url.addQueryItem("client_id", session()->clientId());
+    url.addQueryItem("redirect_uri", "urn:ietf:wg:oauth:2.0:oob");
+    url.addQueryItem("scope", d->scope);
 
-    return QUrl(QString ("https://accounts.google.com/o/oauth2/auth?client_id=%1&scope=%2&response_type=%3&redirect_uri=%4")
-                .arg(session()->clientId())
-                .arg(scope_)
-                .arg(responseType)
-                .arg(redirectUri));
+    return url;
+}
+
+int CommandOAuth2::accessTokenExpiresIn() const
+{
+    Q_D(const CommandOAuth2);
+    return d->expiresIn;
 }
 
 void CommandOAuth2::requestAccessToken(const QString &authCode)
@@ -89,6 +123,8 @@ void CommandOAuth2::requestAccessToken(const QString &authCode)
 
 void CommandOAuth2::requestAccessTokenFinished()
 {
+    Q_D(CommandOAuth2);
+
     tryAutoDelete();
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (!reply)
@@ -102,8 +138,8 @@ void CommandOAuth2::requestAccessTokenFinished()
     if (!parseJsonReply(reply, map))
         return;
 
-    QString accessToken = map["access_token"].toString();
-    QString refreshToken = map["refresh_token"].toString();
+    QString accessToken = map.value("access_token").toString();
+    QString refreshToken = map.value("refresh_token").toString();
     if (accessToken.isEmpty() || refreshToken.isEmpty())
     {
         emitError(UnknownError, tr("Access or refresh token is empty in reply to \"%1\"")
@@ -111,10 +147,17 @@ void CommandOAuth2::requestAccessTokenFinished()
         return;
     }
 
+    QString tokenType = map.value("token_type").toString();
+    if (tokenType != "Bearer")
+    {
+        qWarning() << "Unsupported token type: " << tokenType;
+    }
+
+    d->expiresIn = map.value("expires_in").toInt();
+
     session()->setAccessToken(accessToken);
     session()->setRefreshToken(refreshToken);
 
-    emit finished();
     emitSuccess();
 }
 

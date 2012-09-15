@@ -47,6 +47,7 @@ void CommandRefreshToken::exec()
 
     QNetworkReply* reply = session()->networkManager()->post(request, str.toUtf8());
     connect(reply, SIGNAL(finished()), SLOT(queryFinished()));
+    reply->setParent(this);
 }
 
 void CommandRefreshToken::queryFinished()

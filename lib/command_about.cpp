@@ -46,6 +46,7 @@ void CommandAbout::reexecuteQuery()
 
     QNetworkReply* reply = session()->networkManager()->get(request);
     connect(reply, SIGNAL(finished()), this, SLOT(queryFinished()));
+    reply->setParent(this);
 }
 
 void CommandAbout::queryFinished()
