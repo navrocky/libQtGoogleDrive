@@ -36,7 +36,6 @@ private slots:
     void getFileListFinished();
 
     void downloadFile();
-    void downloadFileFinished();
     void downloadProgress(qint64 v, qint64 total);
     
     void uploadSimpleFile();

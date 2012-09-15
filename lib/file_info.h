@@ -17,7 +17,7 @@ class FileInfo
 public:
     FileInfo();
     explicit FileInfo(const QVariantMap& data);
-    explicit FileInfo(const FileInfo& src);
+    FileInfo(const FileInfo& src);
     ~FileInfo();
 
     FileInfo& operator=(const FileInfo& src);

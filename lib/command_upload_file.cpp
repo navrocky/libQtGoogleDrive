@@ -141,6 +141,7 @@ void CommandUploadFile::multipartUpload()
     multiPart->setParent(reply);
 
     connect(reply, SIGNAL(finished()), SLOT(requestFinished()));
+    connect(reply, SIGNAL(uploadProgress(qint64,qint64)), SIGNAL(progress(qint64,qint64)));
     reply->setParent(this);
 }
 

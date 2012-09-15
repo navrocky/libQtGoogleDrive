@@ -17,7 +17,7 @@ class AboutInfo
 public:
     AboutInfo();
     explicit AboutInfo(const QVariantMap& data);
-    explicit AboutInfo(const AboutInfo& src);
+    AboutInfo(const AboutInfo& src);
     ~AboutInfo();
     AboutInfo& operator=(const AboutInfo&);
 
