@@ -29,6 +29,10 @@ private slots:
     void showOptionsDialog();
     void login();
     void authFinished();
+
+    void about();
+    void aboutFinished();
+
     void getFileList();
     void getFileListFinished();
 

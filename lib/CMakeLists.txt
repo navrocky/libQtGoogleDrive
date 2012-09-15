@@ -17,11 +17,13 @@ set(HEADERS
     drive_manager.h
     session.h
     file_info.h
+    about_info.h
     command.h
     command_private.h
     authorized_command.h
     command_refresh_token.h
     command_oauth2.h
+    command_about.h
     command_file_list.h
     command_download_file.h
     command_upload_file.h
@@ -34,6 +36,7 @@ set(MOC_HEADERS
     authorized_command.h
     command_refresh_token.h
     command_oauth2.h
+    command_about.h
     command_file_list.h
     command_download_file.h
     command_upload_file.h
@@ -44,10 +47,12 @@ set(SOURCES
     drive_manager.cpp
     session.cpp
     file_info.cpp
+    about_info.cpp
     command.cpp
     authorized_command.cpp
     command_refresh_token.cpp
     command_oauth2.cpp
+    command_about.cpp
     command_file_list.cpp
     command_download_file.cpp
     command_upload_file.cpp

@@ -33,7 +33,7 @@
      <x>0</x>
      <y>0</y>
      <width>800</width>
-     <height>21</height>
+     <height>24</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuLogin">
@@ -55,9 +55,11 @@
      <string>Operations</string>
     </property>
     <addaction name="actionLogin"/>
+    <addaction name="separator"/>
+    <addaction name="actionAbout"/>
     <addaction name="actionGet_file_list"/>
-    <addaction name="actionDownload_file"/>
     <addaction name="actionUpload_simple_file"/>
+    <addaction name="actionDownload_file"/>
    </widget>
    <addaction name="menuLogin"/>
    <addaction name="menuOperations"/>
@@ -112,6 +114,11 @@
   <action name="actionUpload_simple_file">
    <property name="text">
     <string>Upload simple file</string>
+   </property>
+  </action>
+  <action name="actionAbout">
+   <property name="text">
+    <string>About</string>
    </property>
   </action>
  </widget>

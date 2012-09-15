@@ -15,6 +15,7 @@
 #include <QBuffer>
 
 #include "../lib/command_oauth2.h"
+#include "../lib/command_about.h"
 #include "../lib/command_file_list.h"
 #include "../lib/command_download_file.h"
 #include "../lib/command_upload_file.h"
@@ -33,6 +34,7 @@ MainWindow::MainWindow(QWidget *parent)
 {
     ui->setupUi(this);
     connect(ui->actionLogin, SIGNAL(triggered()), SLOT(login()));
+    connect(ui->actionAbout, SIGNAL(triggered()), SLOT(about()));
     connect(ui->actionGet_file_list, SIGNAL(triggered()), SLOT(getFileList()));
     connect(ui->actionEdit_options, SIGNAL(triggered()), SLOT(showOptionsDialog()));
     connect(ui->actionDownload_file, SIGNAL(triggered()), SLOT(downloadFile()));
@@ -132,6 +134,28 @@ void MainWindow::authFinished()
     writeHint(tr("Authorization finished. <br>Access token: <b>%1</b><br><br>Refresh token: <b>%2</b>")
               .arg(session_->accessToken())
               .arg(session_->refreshToken()));
+}
+
+void MainWindow::about()
+{
+    CommandAbout* cmd = new CommandAbout(session_);
+    cmd->setAutoDelete(true);
+    connect(cmd, SIGNAL(finished()), SLOT(aboutFinished()));
+    cmd->exec();
+}
+
+void MainWindow::aboutFinished()
+{
+    CommandAbout* cmd = qobject_cast<CommandAbout*>(sender());
+    if (cmd->error() != Command::NoError)
+        return;
+
+    writeHint(tr("About finished."));
+    writeInfo(tr("Name: %1").arg(cmd->resultInfo().name()));
+    writeInfo(tr("rootFolderId: %1").arg(cmd->resultInfo().rootFolderId()));
+    writeInfo(tr("quotaBytesTotal: %1").arg(cmd->resultInfo().quotaBytesTotal()));
+    writeInfo(tr("quotaBytesUsed: %1").arg(cmd->resultInfo().quotaBytesUsed()));
+    writeInfo(tr("quotaBytesUsedInTrash: %1").arg(cmd->resultInfo().quotaBytesUsedInTrash()));
 }
 
 void MainWindow::getFileList()
