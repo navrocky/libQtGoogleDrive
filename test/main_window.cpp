@@ -158,23 +158,21 @@ void MainWindow::aboutFinished()
 
 void MainWindow::getFileList()
 {
-    CommandFileList* cmd = new CommandFileList(session_);
-    cmd->setAutoDelete(true);
-    connect(cmd, SIGNAL(finished()), SLOT(getFileListFinished()));
-    cmd->exec();
-}
-
-void MainWindow::getFileListFinished()
-{
-    CommandFileList* cmd = qobject_cast<CommandFileList*>(sender());
-    if (cmd->error() != Command::NoError)
+    QTime tm;
+    tm.start();
+    CommandFileList cmd(session_);
+    cmd.setFields("items(fileSize,id,title)");
+    cmd.exec();
+    if (!cmd.waitForFinish(false))
         return;
 
     writeHint(tr("File list aquired"));
-    foreach (const FileInfo& fi, cmd->files())
+    foreach (const FileInfo& fi, cmd.files())
     {
         writeInfo(QString("%1 size=%2 id=%3").arg(fi.title()).arg(fi.fileSize()).arg(fi.id()));
     }
+
+    writeHint(tr("Elapsed %1").arg(tm.elapsed()));
 }
 
 void MainWindow::downloadFile()

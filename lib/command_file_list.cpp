@@ -20,6 +20,7 @@ class CommandFileListPrivate : public CommandPrivate
 public:
     FileInfoList files;
     QString query;
+    QString fields;
 };
 
 CommandFileList::CommandFileList(Session *session)
@@ -31,6 +32,18 @@ FileInfoList CommandFileList::files() const
 {
     Q_D(const CommandFileList);
     return d->files;
+}
+
+QString CommandFileList::fields() const
+{
+    Q_D(const CommandFileList);
+    return d->fields;
+}
+
+void CommandFileList::setFields(const QString& v)
+{
+    Q_D(CommandFileList);
+    d->fields = v;
 }
 
 void CommandFileList::exec(const QString &query)
@@ -77,6 +90,8 @@ void CommandFileList::reexecuteQuery()
     QUrl url("https://www.googleapis.com/drive/v2/files");
     if (!d->query.isEmpty())
         url.addQueryItem("q", d->query);
+    if (!d->fields.isEmpty())
+        url.addQueryItem("fields", d->fields);
 
     QNetworkRequest request(url);
     setRequestAccessToken(request, session()->accessToken());

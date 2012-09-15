@@ -27,6 +27,9 @@ public:
      * @return received file list.
      */
     FileInfoList files() const;
+
+    QString fields() const;
+    void setFields(const QString&);
     
 public slots:
     /**

@@ -17,6 +17,7 @@ set(HEADERS
     drive_manager.h
     session.h
     file_info.h
+    fields.h
     about_info.h
     command.h
     command_private.h
@@ -47,6 +48,7 @@ set(SOURCES
     drive_manager.cpp
     session.cpp
     file_info.cpp
+    fields.cpp
     about_info.cpp
     command.cpp
     authorized_command.cpp
