@@ -13,6 +13,9 @@
 #include "../lib/command_oauth2.h"
 #include "../lib/command_file_list.h"
 
+#include <qjson/serializer.h>
+#include <qjson/parser.h>
+#include <boost/property_tree/json_parser.hpp>
 #include "gdrive.h"
 
 using namespace GoogleDrive;
@@ -22,7 +25,7 @@ const QString c_clientSecret = "HoJXcAl4JdCDHEohBVAvTW9a";
 
 const QString c_refreshToken = "refreshToken";
 
-struct GDrive::Pimpl {
+struct gdrive::Pimpl {
     
     Pimpl()
         : session(&manager)
@@ -37,18 +40,18 @@ struct GDrive::Pimpl {
     QString error;
 };
 
-GDrive::GDrive(QObject* parent)
+gdrive::gdrive(QObject* parent)
     : QObject(parent)
     , p_(new Pimpl)
 {
     QTimer::singleShot(0, this, SLOT(init()));
 }
 
-GDrive::~GDrive()
+gdrive::~gdrive()
 {
 }
 
-void GDrive::init()
+void gdrive::init()
 {
     QSettings s;
     
@@ -61,12 +64,10 @@ void GDrive::init()
         refreshToken();
         s.setValue(c_refreshToken, p_->session.refreshToken());
     }
-    
-    list();
 }
 
 
-bool GDrive::refreshToken()
+bool gdrive::refreshToken()
 {
     CommandOAuth2 cmd(&p_->session);
     cmd.setScope(CommandOAuth2::FullAccessScope);
@@ -85,19 +86,19 @@ bool GDrive::refreshToken()
         throw std::runtime_error(("can't obtain refresh tocken:" + p_->error).toStdString());
 }
 
-void GDrive::finish()
+void gdrive::finish()
 {
     p_->loop.quit();
 }
 
-void GDrive::error(QString message)
+void gdrive::error(QString message)
 {
     p_->error = message;
     p_->loop.exit(1);
 }
 
 
-void GDrive::list()
+void gdrive::list(const variables_map& vars)
 {
     CommandFileList cmd(&p_->session);
     QObject::connect(&cmd, SIGNAL(finished(const GoogleDrive::FileInfoList)), SLOT(finish()));
@@ -109,8 +110,47 @@ void GDrive::list()
         throw std::runtime_error(("can't obtain list:" + p_->error).toStdString());
     
     foreach(const GoogleDrive::FileInfo& info, cmd.files()) {
-        std::cerr << info.title().toStdString() << std::endl;
+        if (info.isRoot())
+        {
+            std::cout << "[root] " << info.title().toLocal8Bit().constData() << std::endl;
+        }
     }
+    
+    foreach(const GoogleDrive::FileInfo& info, cmd.files()) {
+        if (info.isFolder())
+        {
+            std::cout << "[dir]  " << info.title().toLocal8Bit().constData() << std::endl;
+        }
+    }
+
+    foreach(const GoogleDrive::FileInfo& info, cmd.files()) {
+        if (!info.isFolder())
+        {
+            std::cout << "[file] " << info.title().toLocal8Bit().constData() << std::endl;
+            
+//             if (info.title() == "Ермак")
+            {
+//                 QJson::Serializer serializer;
+//                 QByteArray s =  serializer.serialize(info.rawData());
+// 
+//                 //this is holy shit workaround, because of QJson::Serializer doesn't
+//                 //indent output text, but boost::json_parser does!
+//                 std::stringstream ss;
+//                 ss.str(QString(s).toStdString());
+// 
+//                 boost::property_tree::ptree ptree;
+//                 boost::property_tree::read_json( ss, ptree );
+//                 boost::property_tree::write_json( ss, ptree );
+// 
+//                 std::cerr << ss.str() << std::endl;
+            }
+            
+            
+        }
+    }
+
+    
+    emit finished(EXIT_SUCCESS);
 }
 
 

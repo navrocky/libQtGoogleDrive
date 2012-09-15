@@ -32,6 +32,7 @@ public:
 
     QString mimeType() const;
     bool isFolder() const;
+    bool isRoot() const;
     QDateTime createdDate() const;
     QDateTime modifiedDate() const;
     QDateTime modifiedByMeDate() const;
