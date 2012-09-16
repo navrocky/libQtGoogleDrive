@@ -22,6 +22,8 @@ public:
 
     FileInfo& operator=(const FileInfo& src);
 
+    bool isEmpty() const;
+
     QVariantMap rawData() const;
 
     QString id() const;

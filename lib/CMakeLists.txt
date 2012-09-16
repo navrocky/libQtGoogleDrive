@@ -25,6 +25,7 @@ set(HEADERS
     command_refresh_token.h
     command_oauth2.h
     command_about.h
+    command_get.h
     command_file_list.h
     command_download_file.h
     command_upload_file.h
@@ -38,6 +39,7 @@ set(MOC_HEADERS
     command_refresh_token.h
     command_oauth2.h
     command_about.h
+    command_get.h
     command_file_list.h
     command_download_file.h
     command_upload_file.h
@@ -55,6 +57,7 @@ set(SOURCES
     command_refresh_token.cpp
     command_oauth2.cpp
     command_about.cpp
+    command_get.cpp
     command_file_list.cpp
     command_download_file.cpp
     command_upload_file.cpp

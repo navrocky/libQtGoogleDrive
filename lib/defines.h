@@ -4,9 +4,8 @@
 namespace GoogleDrive
 {
 
-const char cAuthorization[] = "Authorization";
-
+//const char cAuthorization[] = "Authorization";
 
 }
 
-#endif // DEFINES_H
+#endif

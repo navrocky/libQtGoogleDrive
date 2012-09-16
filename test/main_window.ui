@@ -58,6 +58,7 @@
     <addaction name="separator"/>
     <addaction name="actionAbout"/>
     <addaction name="actionGet_file_list"/>
+    <addaction name="actionGet_file_info"/>
     <addaction name="actionUpload_simple_file"/>
     <addaction name="actionDownload_file"/>
    </widget>
@@ -119,6 +120,11 @@
   <action name="actionAbout">
    <property name="text">
     <string>About</string>
+   </property>
+  </action>
+  <action name="actionGet_file_info">
+   <property name="text">
+    <string>Get file info</string>
    </property>
   </action>
  </widget>

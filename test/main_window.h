@@ -33,6 +33,7 @@ private slots:
     void aboutFinished();
 
     void getFileList();
+    void getFileInfo();
 
     void downloadFile();
     void downloadProgress(qint64 v, qint64 total);
@@ -49,6 +50,8 @@ private:
     void writeText(const QString& msg);
     void writeMessage(const QString& msg, QColor col, bool time);
     void updateStatusBar();
+
+    GoogleDrive::FileInfo getTestFileInfo() const;
 
     Ui::MainWindow *ui;
     QNetworkAccessManager* manager_;

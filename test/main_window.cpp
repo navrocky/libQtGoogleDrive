@@ -18,6 +18,7 @@
 #include "../lib/command_about.h"
 #include "../lib/file_info.h"
 #include "../lib/command_file_list.h"
+#include "../lib/command_get.h"
 #include "../lib/command_download_file.h"
 #include "../lib/command_upload_file.h"
 
@@ -26,6 +27,8 @@
 #include "options.h"
 
 using namespace GoogleDrive;
+
+
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -37,6 +40,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionLogin, SIGNAL(triggered()), SLOT(login()));
     connect(ui->actionAbout, SIGNAL(triggered()), SLOT(about()));
     connect(ui->actionGet_file_list, SIGNAL(triggered()), SLOT(getFileList()));
+    connect(ui->actionGet_file_info, SIGNAL(triggered()), SLOT(getFileInfo()));
     connect(ui->actionEdit_options, SIGNAL(triggered()), SLOT(showOptionsDialog()));
     connect(ui->actionDownload_file, SIGNAL(triggered()), SLOT(downloadFile()));
     connect(ui->actionUpload_simple_file, SIGNAL(triggered()), SLOT(uploadSimpleFile()));
@@ -175,15 +179,27 @@ void MainWindow::getFileList()
     writeHint(tr("Elapsed %1").arg(tm.elapsed()));
 }
 
+void MainWindow::getFileInfo()
+{
+    FileInfo fi = getTestFileInfo();
+    if (fi.isEmpty())
+        return;
+
+    CommandGet cmd(session_);
+    cmd.exec(fi.id());
+    if (!cmd.waitForFinish(false))
+        return;
+
+    if (cmd.resultFileInfo().id() != fi.id())
+        writeError(tr("File information has wrong id"));
+    writeHint(tr("Finished. title=\"%1\"").arg(cmd.resultFileInfo().title()));
+}
+
 void MainWindow::downloadFile()
 {
-    CommandFileList getListCmd(session_);
-    getListCmd.exec("title='test file.txt'");
-    if (!getListCmd.waitForFinish(false))
+    FileInfo fi = getTestFileInfo();
+    if (fi.isEmpty())
         return;
-    if (getListCmd.files().isEmpty())
-        return;
-    FileInfo fi = getListCmd.files().first();
 
     QFile f(fi.title());
     f.open(QFile::WriteOnly);
@@ -269,6 +285,18 @@ void MainWindow::updateStatusBar()
         sl << cmd->metaObject()->className();
     }
     statusBar()->showMessage(tr("Executing commands: %1").arg(sl.join(", ")));
+}
+
+FileInfo MainWindow::getTestFileInfo() const
+{
+    CommandFileList getListCmd(session_);
+    getListCmd.exec("title='test file.txt'");
+    if (!getListCmd.waitForFinish(false))
+        return FileInfo();
+    if (getListCmd.files().isEmpty())
+        return FileInfo();
+    FileInfo fi = getListCmd.files().first();
+    return fi;
 }
 
 void MainWindow::writeHint(const QString &msg, bool time)

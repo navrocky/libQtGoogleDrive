@@ -46,6 +46,11 @@ FileInfo &FileInfo::operator =(const FileInfo &src)
     d->data = src.d->data;
 }
 
+bool FileInfo::isEmpty() const
+{
+    return d->data.isEmpty();
+}
+
 QVariantMap FileInfo::rawData() const
 {
     return d->data;
