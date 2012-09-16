@@ -4,9 +4,6 @@
 namespace GoogleDrive
 {
 
-/**
- * @brief Fields string constructor
- */
 class Fields
 {
 public:

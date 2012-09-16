@@ -11,6 +11,11 @@ namespace GoogleDrive
 
 /**
 * @brief File information
+*
+* It holds full file information struct in QVariantMap format and provides
+* convenient methods for read fields and build this struct from scratch.
+*
+* @sa CommandFileList, CommandGet
 */
 class FileInfo
 {
@@ -50,7 +55,7 @@ private:
 
 /**
 * @typedef FileInfoList
-* @brief List of information files.
+* @brief List of file's informations.
 */
 typedef QList<FileInfo> FileInfoList;
 

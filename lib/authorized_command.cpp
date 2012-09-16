@@ -1,11 +1,17 @@
 #include "authorized_command.h"
 
 #include <QNetworkReply>
+#include <QPointer>
 
 #include "command_refresh_token.h"
 #include "session.h"
 
-Q_DECLARE_METATYPE(GoogleDrive::CommandRefreshToken*)
+namespace GoogleDrive
+{
+typedef QPointer<GoogleDrive::CommandRefreshToken> CommandRefreshToken_p;
+}
+
+Q_DECLARE_METATYPE(GoogleDrive::CommandRefreshToken_p)
 
 namespace GoogleDrive
 {
@@ -26,9 +32,9 @@ bool AuthorizedCommand::checkForRefreshToken(const QVariantMap& map)
     if (!map.contains(cError))
         return false;
 
-    const QVariantMap& errorMap = map[cError].toMap();
-    const QString& code = errorMap["code"].toString();
-    const QString& message = errorMap["message"].toString();
+    const QVariantMap& errorMap = map.value(cError).toMap();
+    const QString& code = errorMap.value("code").toString();
+    const QString& message = errorMap.value("message").toString();
 
     if (code == "403")
     {
@@ -64,12 +70,13 @@ bool AuthorizedCommand::checkInvalidReplyAndRefreshToken(QNetworkReply *reply)
 
 void AuthorizedCommand::refreshToken()
 {
-    CommandRefreshToken* cmd = session()->property(cRefreshCommand).value<CommandRefreshToken*>();
+    CommandRefreshToken_p cmd = session()->property(cRefreshCommand).value<CommandRefreshToken_p>();
     if (!cmd)
     {
         cmd = new CommandRefreshToken(session());
+        cmd->setAutoDelete(true);
         cmd->exec();
-        session()->setProperty(cRefreshCommand, QVariant::fromValue(cmd));
+        session()->setProperty(cRefreshCommand, QVariant::fromValue(CommandRefreshToken_p(cmd)));
     }
     connect(cmd, SIGNAL(finished()), SLOT(refreshTokenFinished()));
 }

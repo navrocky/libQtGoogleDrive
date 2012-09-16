@@ -10,7 +10,13 @@ namespace GoogleDrive
 class CommandUploadFilePrivate;
 
 /**
- * @brief Upload file contents
+ * @brief Uploads file contents
+ *
+ * This command uploads file contents with metadata to the GD.
+ * If provided FileInfo contains valid file ID than file metadata and data will
+ * be rewritten, otherwise the new file will be created.
+ *
+ * After uploading
  */
 class CommandUploadFile : public AuthorizedCommand
 {

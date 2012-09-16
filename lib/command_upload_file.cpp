@@ -18,7 +18,7 @@ using namespace GoogleDrive::Internal;
 namespace GoogleDrive
 {
 
-struct CommandUploadFilePrivate : public CommandPrivate
+class CommandUploadFilePrivate : public CommandPrivate
 {
 public:
     CommandUploadFilePrivate()

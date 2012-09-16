@@ -12,9 +12,11 @@ namespace GoogleDrive
 class CommandOAuth2Private;
 
 /**
- * @brief First-time authorization
+ * @brief First-time OAuth2 authorization for installed applications
+ *
  * Authenticating users with OAuth 2.0. At the moment only supported scenario
  * for installed applications.
+ *
  * @sa https://developers.google.com/drive/about-auth
  * @sa https://developers.google.com/accounts/docs/OAuth2InstalledApp
  */

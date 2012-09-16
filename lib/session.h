@@ -13,6 +13,12 @@ class CommandOAuth2;
 class CommandRefreshToken;
 class SessionPrivate;
 
+/**
+ * @brief GoogleDrive session
+ *
+ * Provides environment for executing GD commands. It holds pointer to
+ * QNetworkAccessManager and access tokens.
+ */
 class Session : public QObject
 {
     Q_OBJECT
