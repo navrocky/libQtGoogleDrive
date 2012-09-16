@@ -20,11 +20,9 @@ class CommandOAuth2Private : public CommandPrivate
 {
 public:
     CommandOAuth2Private()
-        : expiresIn()
     {}
 
     QString scope;
-    int expiresIn;
 
 };
 
@@ -97,12 +95,6 @@ QUrl CommandOAuth2::getLoginUrl() const
     return url;
 }
 
-int CommandOAuth2::accessTokenExpiresIn() const
-{
-    Q_D(const CommandOAuth2);
-    return d->expiresIn;
-}
-
 void CommandOAuth2::requestAccessToken(const QString &authCode)
 {
     emitStarted();
@@ -153,10 +145,9 @@ void CommandOAuth2::requestAccessTokenFinished()
         qWarning() << "Unsupported token type: " << tokenType;
     }
 
-    d->expiresIn = map.value("expires_in").toInt();
-
-    session()->setAccessToken(accessToken);
     session()->setRefreshToken(refreshToken);
+    session()->setAccessToken(accessToken);
+    session()->setAccessTokenExpiresIn(map.value("expires_in").toInt());
 
     emitSuccess();
 }

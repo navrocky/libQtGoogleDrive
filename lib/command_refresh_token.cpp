@@ -1,5 +1,6 @@
 #include "command_refresh_token.h"
 
+#include <QtDebug>
 #include <QNetworkRequest>
 #include <QNetworkReply>
 
@@ -72,7 +73,15 @@ void CommandRefreshToken::queryFinished()
         return;
     }
 
+    int expiresIn = map.value("expires_in").toInt();
+    QString token_type = map.value("token_type").toString();
+    if (token_type != "Bearer")
+    {
+        qWarning() << "Unsupported token type" << token_type;
+    }
+
     session()->setAccessToken(accessToken);
+    session()->setAccessTokenExpiresIn(expiresIn);
 
     emitSuccess();
 }

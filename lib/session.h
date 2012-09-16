@@ -9,6 +9,8 @@ namespace GoogleDrive
 {
 
 class Command;
+class CommandOAuth2;
+class CommandRefreshToken;
 class SessionPrivate;
 
 class Session : public QObject
@@ -35,11 +37,16 @@ public:
     QString clientSecret() const;
     void setClientSecret(const QString& v);
 
-    QString accessToken() const;
-    void setAccessToken(const QString& v);
-
     QString refreshToken() const;
     void setRefreshToken(const QString& v);
+
+    QString accessToken() const;
+
+    /**
+     * Returns number of seconds after access_token will be expired.
+     * This value is valid after first time authorization or after executing any command.
+     */
+    int accessTokenExpiresIn() const;
 
 signals:
     /**
@@ -64,6 +71,11 @@ signals:
 
 private:
     friend class Command;
+    friend class CommandOAuth2;
+    friend class CommandRefreshToken;
+
+    void setAccessToken(const QString& v);
+    void setAccessTokenExpiresIn(int);
 
     SessionPrivate* d_ptr;
     Q_DECLARE_PRIVATE(Session)

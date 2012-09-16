@@ -1,8 +1,8 @@
 #include "session.h"
 
 #include <QPointer>
-
 #include <QNetworkAccessManager>
+#include <QTime>
 
 namespace GoogleDrive
 {
@@ -13,8 +13,10 @@ public:
     QPointer<QNetworkAccessManager> manager;
     QString clientId;
     QString clientSecret;
-    QString accessToken;
     QString refreshToken;
+    QString accessToken;
+    int accessTokenExpiresIn;
+    QTime accessTokenExpiresTime;
 };
 
 Session::Session(QNetworkAccessManager* manager, QObject* parent)
@@ -63,13 +65,30 @@ void Session::setClientSecret(const QString &v)
 QString Session::accessToken() const
 {
     Q_D(const Session);
-    return d->accessToken;
+
+    if (d->accessTokenExpiresTime.elapsed() < d->accessTokenExpiresIn * 100)
+        return d->accessToken;
+    else
+        return QString(); // expired
+}
+
+int Session::accessTokenExpiresIn() const
+{
+    Q_D(const Session);
+    return d->accessTokenExpiresIn;
 }
 
 void Session::setAccessToken(const QString &v)
 {
     Q_D(Session);
     d->accessToken = v;
+}
+
+void Session::setAccessTokenExpiresIn(int v)
+{
+    Q_D(Session);
+    d->accessTokenExpiresIn = v;
+    d->accessTokenExpiresTime.start();
 }
 
 QString Session::refreshToken() const

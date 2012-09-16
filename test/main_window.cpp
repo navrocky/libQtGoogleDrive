@@ -131,7 +131,7 @@ void MainWindow::login()
                  "<br>Access token expires in: <b>%3</b>")
               .arg(session_->accessToken())
               .arg(session_->refreshToken())
-              .arg(cmd.accessTokenExpiresIn()));
+              .arg(session_->accessTokenExpiresIn()));
 }
 
 void MainWindow::about()

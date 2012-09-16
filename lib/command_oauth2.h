@@ -70,12 +70,6 @@ public:
      */
     QUrl getLoginUrl() const;
 
-    /**
-     * Returns number of seconds after access_token will be expired.
-     * This value is valid when the command completes.
-     */
-    int accessTokenExpiresIn() const;
-
 public slots:
     /**
      * Requesting refresh and access tokens using authorization code retrieved
