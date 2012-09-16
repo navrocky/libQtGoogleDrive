@@ -21,6 +21,7 @@
 #include "../lib/command_get.h"
 #include "../lib/command_download_file.h"
 #include "../lib/command_upload_file.h"
+#include "../lib/command_delete.h"
 
 #include "options_dialog.h"
 #include "ui_main_window.h"
@@ -44,6 +45,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionEdit_options, SIGNAL(triggered()), SLOT(showOptionsDialog()));
     connect(ui->actionDownload_file, SIGNAL(triggered()), SLOT(downloadFile()));
     connect(ui->actionUpload_simple_file, SIGNAL(triggered()), SLOT(uploadSimpleFile()));
+    connect(ui->actionDelete_test_file, SIGNAL(triggered()), SLOT(deleteFile()));
     writeText(tr("<p><h1>Welcome to the Qt Google Drive API test</h1></p><br>"));
 
     QSettings s;
@@ -183,7 +185,10 @@ void MainWindow::getFileInfo()
 {
     FileInfo fi = getTestFileInfo();
     if (fi.isEmpty())
+    {
+        writeError(tr("Upload test file first"));
         return;
+    }
 
     CommandGet cmd(session_);
     cmd.exec(fi.id());
@@ -199,7 +204,10 @@ void MainWindow::downloadFile()
 {
     FileInfo fi = getTestFileInfo();
     if (fi.isEmpty())
+    {
+        writeError(tr("Upload test file first"));
         return;
+    }
 
     QFile f(fi.title());
     f.open(QFile::WriteOnly);
@@ -242,6 +250,22 @@ void MainWindow::uploadSimpleFileFinished()
 void MainWindow::uploadSimpleProgress(qint64 v, qint64 total)
 {
     writeHint(tr("upload progress: %1 from %2").arg(v).arg(total));
+}
+
+void MainWindow::deleteFile()
+{
+    FileInfo fi = getTestFileInfo();
+    if (fi.isEmpty())
+    {
+        writeError(tr("Upload test file first"));
+        return;
+    }
+
+    CommandDelete cmd(session_);
+    cmd.exec(fi.id());
+    if (!cmd.waitForFinish(false))
+        return;
+    writeHint(tr("File deleted"));
 }
 
 void MainWindow::writeInfo(const QString &msg, bool time)

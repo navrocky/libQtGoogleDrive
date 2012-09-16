@@ -58,9 +58,10 @@
     <addaction name="separator"/>
     <addaction name="actionAbout"/>
     <addaction name="actionGet_file_list"/>
-    <addaction name="actionGet_file_info"/>
     <addaction name="actionUpload_simple_file"/>
+    <addaction name="actionGet_file_info"/>
     <addaction name="actionDownload_file"/>
+    <addaction name="actionDelete_test_file"/>
    </widget>
    <addaction name="menuLogin"/>
    <addaction name="menuOperations"/>
@@ -109,12 +110,12 @@
   </action>
   <action name="actionDownload_file">
    <property name="text">
-    <string>Download file</string>
+    <string>Download test file</string>
    </property>
   </action>
   <action name="actionUpload_simple_file">
    <property name="text">
-    <string>Upload simple file</string>
+    <string>Upload test file</string>
    </property>
   </action>
   <action name="actionAbout">
@@ -124,7 +125,12 @@
   </action>
   <action name="actionGet_file_info">
    <property name="text">
-    <string>Get file info</string>
+    <string>Get test file info</string>
+   </property>
+  </action>
+  <action name="actionDelete_test_file">
+   <property name="text">
+    <string>Delete test file</string>
    </property>
   </action>
  </widget>

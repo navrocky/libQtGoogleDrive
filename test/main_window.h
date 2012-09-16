@@ -42,6 +42,8 @@ private slots:
     void uploadSimpleFileFinished();
     void uploadSimpleProgress(qint64 v, qint64 total);
 
+    void deleteFile();
+
 private:
     void writeInfo(const QString& msg, bool time = true);
     void writeHint(const QString& msg, bool time = true);
