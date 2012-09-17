@@ -3,6 +3,7 @@
 #include <boost/program_options.hpp>
 #include <QCoreApplication>
 #include <QTimer>
+#include <QMetaType>
 
 #include "gdrive.h"
 #include "tools.h"
@@ -14,6 +15,11 @@ void show_help(const options_description& desc)
     std::cout << "\nGoogle Drive CLI " << "\n\n";
     std::cout << desc << "\n";
 }
+
+typedef variables_map* variables_map_ptr;
+
+Q_DECLARE_METATYPE(variables_map_ptr);
+// qRegisterMetaType<variables_map>("variables_map");
 
 int main(int argc, char** argv)
 {
@@ -53,7 +59,8 @@ int main(int argc, char** argv)
         
         if (vm.count("ls"))
         {
-            if (!QMetaObject::invokeMethod(&cli, "list", Qt::QueuedConnection))
+            const QString path = vm["ls"].as<std::string>().c_str();
+            if (!QMetaObject::invokeMethod(&cli, "list", Qt::QueuedConnection, Q_ARG(QString, path)))
                 throw std::runtime_error("can't find method list");
         }
         else

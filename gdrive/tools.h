@@ -4,7 +4,8 @@
 
 #include <QCoreApplication>
 
-class finilizer: public QObject{
+class finilizer: public QObject
+{
     Q_OBJECT
 public:
     explicit finilizer(QObject* parent = 0) : QObject(parent) {}

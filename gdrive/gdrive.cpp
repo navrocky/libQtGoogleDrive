@@ -1,16 +1,19 @@
 
 #include <iostream>
 #include <stdexcept>
+#include <boost/bind.hpp>
 
 #include <QCoreApplication>
 #include <QEventLoop>
 #include <QNetworkAccessManager>
 #include <QSettings>
 #include <QTimer>
-#include <QtGui/QDesktopServices>
+#include <QDesktopServices>
+#include <QStringList>
 
 #include "../lib/session.h"
 #include "../lib/command_oauth2.h"
+#include "../lib/command_about.h"
 #include "../lib/command_file_list.h"
 
 #include <qjson/serializer.h>
@@ -99,12 +102,54 @@ void gdrive::finish()
     }
 }
 
-void gdrive::list(const variables_map& vars)
+void gdrive::list(const QString& path)
 {
-    CommandFileList cmd(&p_->session);
-    QObject::connect(&cmd, SIGNAL(finished()), SLOT(finish()));
+    QString query;
     
-    cmd.exec();
+    foreach(const QString& token, path.split("/")) {
+        if (token.isEmpty()) continue;
+        
+        query.isEmpty()
+            ? query += QString("title = '%1'").arg(token)
+            : query += QString(" or title = '%1'").arg(token);
+    }
+    
+    if (query.isEmpty())
+    {
+        CommandAbout about_cmd(&p_->session);
+        about_cmd.exec();
+        
+        if (!about_cmd.waitForFinish())
+            throw std::runtime_error(about_cmd.errorString().toLocal8Bit().constData());
+        
+        const QString root_id = about_cmd.resultInfo().rootFolderId();
+        query = QString("'%1' in parents").arg(root_id);
+    }
+    
+    CommandFileList ls_cmd(&p_->session);
+    ls_cmd.exec(query);
+    
+    if (!ls_cmd.waitForFinish())
+        throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
+    
+    FileInfoList files = ls_cmd.files();
+    
+    foreach(const QString& token, path.split("/")) {
+        if (token.isEmpty()) continue;
+        
+        FileInfoList::const_iterator it = std::find_if(files.begin(), files.end(), boost::bind(&FileInfo::title, _1) == token);
+        if (it == files.end())
+            throw std::runtime_error((QString("No such file:") + QString(token)).toLocal8Bit().constData());
+    }
+    
+    
+//     foreach(const QString& token, path.split("/")) {
+//         FileInfoList::const_iterator it = std::find_if(files.begin(), files.end(), boost::bind(&FileInfo::title, _1) == token);
+//         if (it == files.end())
+//             throw std::runtime_error((QString("No such file:") + QString(token)).toLocal8Bit().constData());
+//     }
+    
+/*    
     
     if (p_->loop.exec() != 0)
         throw std::runtime_error(("can't obtain list:" + p_->error).toStdString());
@@ -121,12 +166,13 @@ void gdrive::list(const variables_map& vars)
         {
             std::cout << "[dir]  " << info.title().toLocal8Bit().constData() << std::endl;
         }
-    }
+    }*/
 
-    foreach(const GoogleDrive::FileInfo& info, cmd.files()) {
-        if (!info.isFolder())
+    foreach(const GoogleDrive::FileInfo& info, ls_cmd.files()) {
+//         if (!info.isFolder())
         {
             std::cout << "[file] " << info.title().toLocal8Bit().constData() << std::endl;
+//             std::cout << "    -- " << info.id().toStdString() << std::endl;
             
 //             if (info.title() == "Ермак")
             {
