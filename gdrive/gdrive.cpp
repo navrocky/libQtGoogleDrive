@@ -133,70 +133,82 @@ void gdrive::list(const QString& path)
         throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
     
     FileInfoList files = ls_cmd.files();
+
+    Explorer e(files);
     
     foreach(const QString& token, path.split("/")) {
         if (token.isEmpty()) continue;
         
-        FileInfoList::const_iterator it = std::find_if(files.begin(), files.end(), boost::bind(&FileInfo::title, _1) == token);
-        if (it == files.end())
-            throw std::runtime_error((QString("No such file:") + QString(token)).toLocal8Bit().constData());
+        e.cd(token);
     }
     
-    
-//     foreach(const QString& token, path.split("/")) {
-//         FileInfoList::const_iterator it = std::find_if(files.begin(), files.end(), boost::bind(&FileInfo::title, _1) == token);
-//         if (it == files.end())
-//             throw std::runtime_error((QString("No such file:") + QString(token)).toLocal8Bit().constData());
-//     }
-    
-/*    
-    
-    if (p_->loop.exec() != 0)
-        throw std::runtime_error(("can't obtain list:" + p_->error).toStdString());
-    
-    foreach(const GoogleDrive::FileInfo& info, cmd.files()) {
-        if (info.isRoot())
+    if (!e.path().isEmpty())
+    {
+        if (e.isDir())
         {
-            std::cout << "[root] " << info.title().toLocal8Bit().constData() << std::endl;
+            ls_cmd.execForFolder(e.current().id());
+            if (!ls_cmd.waitForFinish())
+                throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
+            
+            files = ls_cmd.files();
+        }
+        else if (e.isFile())
+        {
+            files = FileInfoList() << e.current();
         }
     }
+   
     
-    foreach(const GoogleDrive::FileInfo& info, cmd.files()) {
-        if (info.isFolder())
-        {
-            std::cout << "[dir]  " << info.title().toLocal8Bit().constData() << std::endl;
-        }
-    }*/
-
-    foreach(const GoogleDrive::FileInfo& info, ls_cmd.files()) {
-//         if (!info.isFolder())
-        {
-            std::cout << "[file] " << info.title().toLocal8Bit().constData() << std::endl;
-//             std::cout << "    -- " << info.id().toStdString() << std::endl;
-            
-//             if (info.title() == "Ермак")
-            {
-//                 QJson::Serializer serializer;
-//                 QByteArray s =  serializer.serialize(info.rawData());
-// 
-//                 //this is holy shit workaround, because of QJson::Serializer doesn't
-//                 //indent output text, but boost::json_parser does!
-//                 std::stringstream ss;
-//                 ss.str(QString(s).toStdString());
-// 
-//                 boost::property_tree::ptree ptree;
-//                 boost::property_tree::read_json( ss, ptree );
-//                 boost::property_tree::write_json( ss, ptree );
-// 
-//                 std::cerr << ss.str() << std::endl;
-            }
-            
-            
-        }
+    foreach(const GoogleDrive::FileInfo& info, files) {
+        std::cout << "[file] " << info.title().toLocal8Bit().constData() << std::endl;
     }
-
     
     emit finished(EXIT_SUCCESS);
 }
+
+
+Explorer::Explorer(const FileInfoList& list)
+    : list_(list)
+{
+}
+
+void Explorer::cd(const QString& path)
+{
+    FileInfoList::const_iterator it = std::find_if(list_.begin(), list_.end(),
+        [&] (const FileInfo& info) {
+            return info.title() == path
+                && (path_list_.isEmpty() || info.parents().contains(path_list_.back().id()) );
+        }
+    );
+    
+    if (it == list_.end())
+        throw std::runtime_error("can't cd: item not exists!: " + path.toStdString());
+    
+    path_list_ << *it;
+    path_ << path;
+}
+
+QString Explorer::path() const
+{
+    return path_.join("/");
+}
+
+
+bool Explorer::isDir() const
+{
+    return path_list_.back().isFolder();
+}
+
+bool Explorer::isFile() const
+{
+    return !path_list_.back().isFolder();
+}
+
+const FileInfo& Explorer::current() const
+{
+    return path_list_.back();
+}
+
+
 
 

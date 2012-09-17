@@ -59,7 +59,7 @@ int main(int argc, char** argv)
         
         if (vm.count("ls"))
         {
-            const QString path = vm["ls"].as<std::string>().c_str();
+            const QString path = QString::fromLocal8Bit(vm["ls"].as<std::string>().c_str());
             if (!QMetaObject::invokeMethod(&cli, "list", Qt::QueuedConnection, Q_ARG(QString, path)))
                 throw std::runtime_error("can't find method list");
         }

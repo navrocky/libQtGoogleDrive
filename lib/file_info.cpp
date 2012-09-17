@@ -127,4 +127,13 @@ qint64 FileInfo::fileSize() const
     return res;
 }
 
+QStringList FileInfo::parents() const
+{
+    QStringList ret;
+    foreach(const QVariant& v, d->data.value("parents").toList()) {
+        ret << v.toMap()["id"].toString();
+    }
+    return ret;
+}
+
 }

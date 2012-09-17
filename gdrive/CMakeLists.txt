@@ -1,6 +1,8 @@
 set(TARGET gdrive)
 project(${TARGET})
 
+add_definitions("-std=c++0x")
+
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
 find_package(Boost REQUIRED COMPONENTS

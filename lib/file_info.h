@@ -32,7 +32,7 @@
 #define GOOGLE_DRIVE_FILE_INFO_H
 
 #include <QVariant>
-#include <QString>
+#include <QStringList>
 #include <QDateTime>
 #include <QList>
 
@@ -77,7 +77,8 @@ public:
     bool isEditable() const;
     QUrl downloadUrl() const;
     qint64 fileSize() const;
-
+    QStringList parents() const;
+    
 private:
     struct Impl;
     Impl* d;
