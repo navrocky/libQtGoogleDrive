@@ -1,5 +1,7 @@
 
 #include <iostream>
+#include <boost/bind.hpp>
+
 #include <boost/program_options.hpp>
 #include <QCoreApplication>
 #include <QTimer>
@@ -24,6 +26,7 @@ Q_DECLARE_METATYPE(variables_map_ptr);
 int main(int argc, char** argv)
 {
     std::string path;
+	std::string filename;
     
     try
     {
@@ -32,6 +35,8 @@ int main(int argc, char** argv)
             ("help", "Produce help message")
             ("debug,d", "Produce debug messages")
             ("ls", value<std::string>(&path), "list of files")
+			("get", value<std::string>(&path), "download file")
+			("output", value<std::string>(&filename), "output filename")
         ;
 
         variables_map vm;
@@ -47,7 +52,12 @@ int main(int argc, char** argv)
         }
         notify(vm);
 
- 
+		if (vm.count("help"))
+        {
+			show_help(desc);
+            return EXIT_SUCCESS;
+		}
+		
         QCoreApplication app(argc, argv);
         
         app.setOrganizationName("prog-org-ru-developers");
@@ -56,13 +66,18 @@ int main(int argc, char** argv)
         gdrive cli;
         finilizer f;
         QObject::connect(&cli, SIGNAL(finished(int)), &f, SLOT(exit(int)));
-        
+
         if (vm.count("ls"))
         {
-            const QString path = QString::fromLocal8Bit(vm["ls"].as<std::string>().c_str());
-            if (!QMetaObject::invokeMethod(&cli, "list", Qt::QueuedConnection, Q_ARG(QString, path)))
-                throw std::runtime_error("can't find method list");
+            const QString qpath = path.c_str();
+			cli.delay(boost::bind(&gdrive::list, &cli, qpath));
         }
+        else if (vm.count("get"))
+        {
+            const QString qpath = path.c_str();
+			const QString output = filename.c_str();
+			cli.delay(boost::bind(&gdrive::get, &cli, qpath, output));
+        }        
         else
         {
             show_help(desc);

@@ -10,11 +10,13 @@
 #include <QTimer>
 #include <QDesktopServices>
 #include <QStringList>
+#include <QFile>
 
 #include "../lib/session.h"
 #include "../lib/command_oauth2.h"
 #include "../lib/command_about.h"
 #include "../lib/command_file_list.h"
+#include "../lib/command_download_file.h"
 
 #include <qjson/serializer.h>
 #include <qjson/parser.h>
@@ -36,10 +38,10 @@ struct gdrive::Pimpl {
         session.setClientId(c_clientId);
         session.setClientSecret(c_clientSecret);
     }
-    
+
+	boost::function<void()> f;
     QNetworkAccessManager manager;
     Session session;
-    QEventLoop loop;    
     QString error;
 };
 
@@ -61,12 +63,19 @@ void gdrive::init()
     if (!s.value(c_refreshToken).isNull())
     {
         p_->session.setRefreshToken(s.value(c_refreshToken).value<QString>());
+		p_->f();
     }
     else
     {
         refreshToken();
         s.setValue(c_refreshToken, p_->session.refreshToken());
+		p_->f();
     }
+}
+
+void gdrive::delay(boost::function<void()> f)
+{
+	p_->f = f;
 }
 
 
@@ -74,65 +83,56 @@ bool gdrive::refreshToken()
 {
     CommandOAuth2 cmd(&p_->session);
     cmd.setScope(CommandOAuth2::FullAccessScope);
-    QObject::connect(&cmd, SIGNAL(finished()), SLOT(finish()));
 
     QDesktopServices::openUrl(cmd.getLoginUrl());
 
     std::cout << "Enter auth code:" << std::endl;
     std::string code;
     std::cin >> code;
-    
+
     cmd.requestAccessToken(code.c_str());
-    
-    if (p_->loop.exec() != 0)
+
+    if (!cmd.waitForFinish())
         throw std::runtime_error(("can't obtain refresh token:" + p_->error).toStdString());
 }
 
-void gdrive::finish()
-{
-    Command* cmd = qobject_cast<Command*>(sender());
-    if (cmd->error() == Command::NoError)
-    {
-        p_->loop.quit();
-    }
-    else
-    {
-        p_->error = cmd->errorString();
-        p_->loop.exit(1);
-    }
-}
-
-void gdrive::list(const QString& path)
+FileInfoList gdrive::request_items(const QString &path)
 {
     QString query;
-    
+
     foreach(const QString& token, path.split("/")) {
         if (token.isEmpty()) continue;
-        
+
         query.isEmpty()
             ? query += QString("title = '%1'").arg(token)
             : query += QString(" or title = '%1'").arg(token);
     }
-    
+
     if (query.isEmpty())
     {
         CommandAbout about_cmd(&p_->session);
         about_cmd.exec();
-        
+
         if (!about_cmd.waitForFinish())
             throw std::runtime_error(about_cmd.errorString().toLocal8Bit().constData());
-        
+
         const QString root_id = about_cmd.resultInfo().rootFolderId();
         query = QString("'%1' in parents").arg(root_id);
     }
-    
+
     CommandFileList ls_cmd(&p_->session);
     ls_cmd.exec(query);
-    
+
     if (!ls_cmd.waitForFinish())
         throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
-    
-    FileInfoList files = ls_cmd.files();
+
+    return ls_cmd.files();
+}
+
+
+void gdrive::list(const QString& path)
+{
+	FileInfoList files = request_items(path);
 
     Explorer e(files);
     
@@ -146,6 +146,7 @@ void gdrive::list(const QString& path)
     {
         if (e.isDir())
         {
+			CommandFileList ls_cmd(&p_->session);
             ls_cmd.execForFolder(e.current().id());
             if (!ls_cmd.waitForFinish())
                 throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
@@ -165,6 +166,48 @@ void gdrive::list(const QString& path)
     
     emit finished(EXIT_SUCCESS);
 }
+
+
+void gdrive::get(const QString &path, const QString& output)
+{
+	FileInfoList files = request_items(path);
+
+    Explorer e(files);
+
+	foreach(const QString& token, path.split("/")) {
+        if (token.isEmpty()) continue;
+
+        e.cd(token);
+    }
+
+	if (e.path().isEmpty())
+		throw std::runtime_error("can't download empty path");
+
+	if (e.isDir())
+		throw std::runtime_error("can't download directory");
+
+	if (e.isFile())
+	{
+		QFile file(output);
+
+		bool b = (output.isEmpty())
+			? file.open(stdout, QIODevice::WriteOnly)
+			: file.open(QIODevice::ReadWrite | QIODevice::Truncate);
+
+		if (!b)
+			throw std::runtime_error(std::string("Can't open output: ")
+				+ ((output.isEmpty()) ? "STDOUT" : output.toLocal8Bit().constData()) );
+
+		CommandDownloadFile dwn_cmd(&p_->session);
+		std::cerr << "DOWNLOAD:" << e.current().downloadUrl().toString().toStdString() << std::endl;
+		dwn_cmd.exec(e.current().downloadUrl(), &file);
+		if (!dwn_cmd.waitForFinish())
+                throw std::runtime_error(dwn_cmd.errorString().toLocal8Bit().constData());
+	}
+
+	emit finished(EXIT_SUCCESS);
+}
+
 
 
 Explorer::Explorer(const FileInfoList& list)

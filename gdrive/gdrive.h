@@ -3,6 +3,9 @@
 #define GDOCS_GDOCS_H
 
 #include <memory>
+
+#include <boost/function.hpp>
+
 #include <QObject>
 #include <QStringList>
 
@@ -17,15 +20,19 @@ public:
     
 signals:
     void finished(int);
-    
-public slots:
+
+public:
+	void delay(boost::function<void()> f);
+	
     void list(const QString& path = QString());
+	void get(const QString& path, const QString& output);
     
 private slots:
     void init();
     bool refreshToken();
-    void finish();
-    
+
+private:
+	GoogleDrive::FileInfoList request_items(const QString& path);
     
 private:
     struct Pimpl;
