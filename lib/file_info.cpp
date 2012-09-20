@@ -121,6 +121,20 @@ QUrl FileInfo::downloadUrl() const
     return QUrl(d->data.value("downloadUrl").toString());
 }
 
+QMap<QString, QUrl> FileInfo::exportList() const
+{
+	const QVariantMap vm = d->data.value("exportLinks").toMap();
+	
+	QMap<QString, QUrl> ret;
+
+	QVariantMap::const_iterator it = vm.begin();
+	for(; it != vm.end(); ++it) {
+		ret[it.key()] = it.value().toString();
+	}
+    return ret;
+}
+
+
 qint64 FileInfo::fileSize() const
 {
     qint64 res = d->data.value("fileSize").toULongLong();

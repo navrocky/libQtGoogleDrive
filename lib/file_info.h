@@ -76,6 +76,8 @@ public:
     QDateTime lastViewedByMeDate() const;
     bool isEditable() const;
     QUrl downloadUrl() const;
+	QMap<QString, QUrl> exportList() const;
+	
     qint64 fileSize() const;
     QStringList parents() const;
     

@@ -25,7 +25,8 @@ public:
 	void delay(boost::function<void()> f);
 	
     void list(const QString& path = QString());
-	void get(const QString& path, const QString& output);
+	void get(const QString& path, const QString& output, const QString& format = QString());
+	void formats(const QString& path);
     
 private slots:
     void init();
@@ -40,24 +41,30 @@ private:
 };
 
 
-class Explorer
+class FileInfoExplorer
 {
 public:
     
-    Explorer(const GoogleDrive::FileInfoList& list);
+    FileInfoExplorer(const GoogleDrive::FileInfoList& list);
     
-    void cd(const QString& path);
-    
+    bool cd(const QString& path);
+	bool cd(const QStringList& list);
+
+	
     bool isDir() const;
     bool isFile() const;
     
     QString path() const;
 
     const GoogleDrive::FileInfo& current() const;
-   
+
+	inline const QString& error() const { return error_; }
+
+
 private:
     QStringList path_;
     const GoogleDrive::FileInfoList& list_;
+	QString error_;
     GoogleDrive::FileInfoList path_list_; 
 };
 

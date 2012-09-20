@@ -2,6 +2,7 @@
 #include <iostream>
 #include <stdexcept>
 #include <boost/bind.hpp>
+#include <boost/range/adaptors.hpp>
 
 #include <QCoreApplication>
 #include <QEventLoop>
@@ -22,6 +23,8 @@
 #include <qjson/parser.h>
 #include <boost/property_tree/json_parser.hpp>
 #include "gdrive.h"
+
+using namespace boost::adaptors;
 
 using namespace GoogleDrive;
 
@@ -134,7 +137,7 @@ void gdrive::list(const QString& path)
 {
 	FileInfoList files = request_items(path);
 
-    Explorer e(files);
+    FileInfoExplorer e(files);
     
     foreach(const QString& token, path.split("/")) {
         if (token.isEmpty()) continue;
@@ -167,12 +170,29 @@ void gdrive::list(const QString& path)
     emit finished(EXIT_SUCCESS);
 }
 
+QUrl extract_download_link(const FileInfo& info, const QString& format)
+{
+	if (!info.downloadUrl().isEmpty())
+	{
+		return info.downloadUrl();
+	}
+	else if (info.exportList().contains(format))
+	{
+		return info.exportList().value(format);
+	}
+	else
+	{
+		throw std::runtime_error("invalid export format");
+	}
+}
 
-void gdrive::get(const QString &path, const QString& output)
+void gdrive::get(const QString &path, const QString& output, const QString& format)
 {
 	FileInfoList files = request_items(path);
 
-    Explorer e(files);
+    FileInfoExplorer e(files);
+	if (!e.cd(path))
+		throw std::runtime_error(e.error().toLocal8Bit().constData());
 
 	foreach(const QString& token, path.split("/")) {
         if (token.isEmpty()) continue;
@@ -199,8 +219,7 @@ void gdrive::get(const QString &path, const QString& output)
 				+ ((output.isEmpty()) ? "STDOUT" : output.toLocal8Bit().constData()) );
 
 		CommandDownloadFile dwn_cmd(&p_->session);
-		std::cerr << "DOWNLOAD:" << e.current().downloadUrl().toString().toStdString() << std::endl;
-		dwn_cmd.exec(e.current().downloadUrl(), &file);
+		dwn_cmd.exec(extract_download_link(e.current(), format), &file);
 		if (!dwn_cmd.waitForFinish())
                 throw std::runtime_error(dwn_cmd.errorString().toLocal8Bit().constData());
 	}
@@ -208,46 +227,85 @@ void gdrive::get(const QString &path, const QString& output)
 	emit finished(EXIT_SUCCESS);
 }
 
+void gdrive::formats(const QString &path)
+{
+	FileInfoList files = request_items(path);
+    FileInfoExplorer e(files);
+
+    foreach(const QString& token, path.split("/")) {
+        if (token.isEmpty()) continue;
+
+        e.cd(token);
+    }
+
+    if (!e.path().isEmpty())
+	{
+		foreach(const QString& format, e.current().exportList().toStdMap() | map_keys) {
+			std::cout << format.toLocal8Bit().constData() << std::endl;
+		}
+	}
+	emit finished(EXIT_SUCCESS);
+}
 
 
-Explorer::Explorer(const FileInfoList& list)
+FileInfoExplorer::FileInfoExplorer(const FileInfoList& list)
     : list_(list)
 {
 }
 
-void Explorer::cd(const QString& path)
+bool FileInfoExplorer::cd(const QStringList& list)
 {
-    FileInfoList::const_iterator it = std::find_if(list_.begin(), list_.end(),
-        [&] (const FileInfo& info) {
-            return info.title() == path
-                && (path_list_.isEmpty() || info.parents().contains(path_list_.back().id()) );
-        }
-    );
-    
-    if (it == list_.end())
-        throw std::runtime_error("can't cd: item not exists!: " + path.toStdString());
-    
-    path_list_ << *it;
-    path_ << path;
+	foreach (const QString& token, list) {
+		if (token.isEmpty()) continue;
+
+		const auto finder = [&] (const FileInfo& info) {
+			return info.title() == token
+				&& (path_list_.isEmpty() || info.parents().contains(path_list_.back().id()) );
+		};
+		
+		const FileInfoList::const_iterator it = std::find_if(list_.begin(), list_.end(), finder);
+
+		
+		if (it == list_.end())
+		{
+			error_ = "there is no item with name: " + token;
+			return false;
+		}
+		else if (std::find_if(it + 1, list_.end(), finder) != list_.end())
+		{
+			error_ = "there is more than one item with name: " + token;
+			return false;
+		}
+
+		path_list_ << *it;
+		path_ << token;
+	}
+
+	return true;
 }
 
-QString Explorer::path() const
+bool FileInfoExplorer::cd(const QString& path)
+{
+	return cd(path.split("/"));
+}
+
+QString FileInfoExplorer::path() const
 {
     return path_.join("/");
 }
 
 
-bool Explorer::isDir() const
+bool FileInfoExplorer::isDir() const
 {
     return path_list_.back().isFolder();
 }
 
-bool Explorer::isFile() const
+bool FileInfoExplorer::isFile() const
 {
     return !path_list_.back().isFolder();
 }
 
-const FileInfo& Explorer::current() const
+const FileInfo& FileInfoExplorer::current() const
 {
     return path_list_.back();
 }

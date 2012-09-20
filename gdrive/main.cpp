@@ -27,6 +27,7 @@ int main(int argc, char** argv)
 {
     std::string path;
 	std::string filename;
+	std::string format;
     
     try
     {
@@ -37,6 +38,8 @@ int main(int argc, char** argv)
             ("ls", value<std::string>(&path), "list of files")
 			("get", value<std::string>(&path), "download file")
 			("output", value<std::string>(&filename), "output filename")
+			("format", value<std::string>(&format), "export format")
+			("formats", value<std::string>(&path), "list of formats")
         ;
 
         variables_map vm;
@@ -72,11 +75,17 @@ int main(int argc, char** argv)
             const QString qpath = path.c_str();
 			cli.delay(boost::bind(&gdrive::list, &cli, qpath));
         }
+        else if (vm.count("formats"))
+        {
+            const QString qpath = path.c_str();
+			cli.delay(boost::bind(&gdrive::formats, &cli, qpath));
+        }        
         else if (vm.count("get"))
         {
             const QString qpath = path.c_str();
 			const QString output = filename.c_str();
-			cli.delay(boost::bind(&gdrive::get, &cli, qpath, output));
+			const QString qformat = format.c_str();
+			cli.delay(boost::bind(&gdrive::get, &cli, qpath, output, qformat));
         }        
         else
         {
