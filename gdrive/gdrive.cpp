@@ -42,7 +42,7 @@ struct gdrive::Pimpl {
         session.setClientSecret(c_clientSecret);
     }
 
-	boost::function<void()> f;
+	boost::function<void()> delayed;
     QNetworkAccessManager manager;
     Session session;
     QString error;
@@ -66,21 +66,14 @@ void gdrive::init()
     if (!s.value(c_refreshToken).isNull())
     {
         p_->session.setRefreshToken(s.value(c_refreshToken).value<QString>());
-		p_->f();
     }
     else
     {
         refreshToken();
         s.setValue(c_refreshToken, p_->session.refreshToken());
-		p_->f();
     }
+    p_->delayed();
 }
-
-void gdrive::delay(boost::function<void()> f)
-{
-	p_->f = f;
-}
-
 
 bool gdrive::refreshToken()
 {
@@ -133,41 +126,41 @@ FileInfoList gdrive::request_items(const QString &path)
 }
 
 
-void gdrive::list(const QString& path)
+void gdrive::list(const boost::program_options::variables_map& vm)
 {
-	FileInfoList files = request_items(path);
-
-    FileInfoExplorer e(files);
-    
-    foreach(const QString& token, path.split("/")) {
-        if (token.isEmpty()) continue;
+    p_->delayed = [&] () {
+        const QString path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());
         
-        e.cd(token);
-    }
-    
-    if (!e.path().isEmpty())
-    {
-        if (e.isDir())
+        FileInfoList files = request_items(path);
+
+        FileInfoExplorer e(files);
+        if (!e.cd(path))
+            throw std::runtime_error(e.error().toLocal8Bit().constData());
+        
+        if (!e.path().isEmpty())
         {
-			CommandFileList ls_cmd(&p_->session);
-            ls_cmd.execForFolder(e.current().id());
-            if (!ls_cmd.waitForFinish())
-                throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
-            
-            files = ls_cmd.files();
+            if (e.isDir())
+            {
+                CommandFileList ls_cmd(&p_->session);
+                ls_cmd.execForFolder(e.current().id());
+                if (!ls_cmd.waitForFinish())
+                    throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
+                
+                files = ls_cmd.files();
+            }
+            else if (e.isFile())
+            {
+                files = FileInfoList() << e.current();
+            }
         }
-        else if (e.isFile())
-        {
-            files = FileInfoList() << e.current();
+    
+        
+        foreach(const GoogleDrive::FileInfo& info, files) {
+            std::cout << "[file] " << info.title().toLocal8Bit().constData() << std::endl;
         }
-    }
-   
-    
-    foreach(const GoogleDrive::FileInfo& info, files) {
-        std::cout << "[file] " << info.title().toLocal8Bit().constData() << std::endl;
-    }
-    
-    emit finished(EXIT_SUCCESS);
+        
+        emit finished(EXIT_SUCCESS);
+    };
 }
 
 QUrl extract_download_link(const FileInfo& info, const QString& format)
@@ -227,24 +220,27 @@ void gdrive::get(const QString &path, const QString& output, const QString& form
 	emit finished(EXIT_SUCCESS);
 }
 
-void gdrive::formats(const QString &path)
+void gdrive::formats(const boost::program_options::variables_map& vm)
 {
-	FileInfoList files = request_items(path);
-    FileInfoExplorer e(files);
+    p_->delayed = [&] () {
+        const QString path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());    
+        FileInfoList files = request_items(path);
+        FileInfoExplorer e(files);
 
-    foreach(const QString& token, path.split("/")) {
-        if (token.isEmpty()) continue;
+        foreach(const QString& token, path.split("/")) {
+            if (token.isEmpty()) continue;
 
-        e.cd(token);
-    }
+            e.cd(token);
+        }
 
-    if (!e.path().isEmpty())
-	{
-		foreach(const QString& format, e.current().exportList().toStdMap() | map_keys) {
-			std::cout << format.toLocal8Bit().constData() << std::endl;
-		}
-	}
-	emit finished(EXIT_SUCCESS);
+        if (!e.path().isEmpty())
+        {
+            foreach(const QString& format, e.current().exportList().toStdMap() | map_keys) {
+                std::cout << format.toLocal8Bit().constData() << std::endl;
+            }
+        }
+        emit finished(EXIT_SUCCESS);
+    };
 }
 
 

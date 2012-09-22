@@ -4,7 +4,7 @@
 
 #include <memory>
 
-#include <boost/function.hpp>
+#include <boost/program_options.hpp>
 
 #include <QObject>
 #include <QStringList>
@@ -22,11 +22,9 @@ signals:
     void finished(int);
 
 public:
-	void delay(boost::function<void()> f);
-	
-    void list(const QString& path = QString());
+    void list(const boost::program_options::variables_map& vm);
+    void formats(const boost::program_options::variables_map& vm);    
 	void get(const QString& path, const QString& output, const QString& format = QString());
-	void formats(const QString& path);
     
 private slots:
     void init();
