@@ -62,6 +62,7 @@
     <addaction name="actionGet_file_info"/>
     <addaction name="actionDownload_file"/>
     <addaction name="actionDelete_test_file"/>
+    <addaction name="actionUpdate_test_file"/>
    </widget>
    <addaction name="menuLogin"/>
    <addaction name="menuOperations"/>
@@ -131,6 +132,11 @@
   <action name="actionDelete_test_file">
    <property name="text">
     <string>Delete test file</string>
+   </property>
+  </action>
+  <action name="actionUpdate_test_file">
+   <property name="text">
+    <string>Update test file</string>
    </property>
   </action>
  </widget>

@@ -30,6 +30,7 @@ set(HEADERS
     command_file_list.h
     command_download_file.h
     command_upload_file.h
+    command_update.h
 )
 
 set(MOC_HEADERS
@@ -45,6 +46,7 @@ set(MOC_HEADERS
     command_file_list.h
     command_download_file.h
     command_upload_file.h
+    command_update.h
 )
 
 set(SOURCES
@@ -64,6 +66,7 @@ set(SOURCES
     command_file_list.cpp
     command_download_file.cpp
     command_upload_file.cpp
+    command_update.cpp
 )
 
 set(DEPS

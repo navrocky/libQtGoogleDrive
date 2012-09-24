@@ -96,7 +96,8 @@ bool Command::checkJsonReplyError(const QVariantMap& map)
 bool Command::parseJsonReply(QNetworkReply* reply, QVariantMap& map)
 {
     bool ok = false;
-    QVariant res = QJson::Parser().parse(reply->readAll(), &ok);
+    QByteArray data = reply->readAll();
+    QVariant res = QJson::Parser().parse(data, &ok);
     if (!ok)
     {
         emitError(UnknownError, tr("Json reply parse error"));

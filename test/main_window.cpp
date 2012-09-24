@@ -22,6 +22,7 @@
 #include "../lib/command_download_file.h"
 #include "../lib/command_upload_file.h"
 #include "../lib/command_delete.h"
+#include "../lib/command_update.h"
 
 #include "options_dialog.h"
 #include "ui_main_window.h"
@@ -46,6 +47,7 @@ MainWindow::MainWindow(QWidget *parent)
     connect(ui->actionDownload_file, SIGNAL(triggered()), SLOT(downloadFile()));
     connect(ui->actionUpload_simple_file, SIGNAL(triggered()), SLOT(uploadSimpleFile()));
     connect(ui->actionDelete_test_file, SIGNAL(triggered()), SLOT(deleteFile()));
+    connect(ui->actionUpdate_test_file, SIGNAL(triggered()), SLOT(updateFile()));
     writeText(tr("<p><h1>Welcome to the Qt Google Drive API test</h1></p><br>"));
 
     QSettings s;
@@ -266,6 +268,27 @@ void MainWindow::deleteFile()
     if (!cmd.waitForFinish(false))
         return;
     writeHint(tr("File deleted"));
+}
+
+void MainWindow::updateFile()
+{
+    FileInfo fi = getTestFileInfo();
+    if (fi.isEmpty())
+    {
+        writeError(tr("Upload test file first"));
+        return;
+    }
+
+    CommandUpdate cmd(session_);
+    FileInfo info;
+    info.setId(fi.id());
+    info.setTitle(tr("test_file_updated.txt"));
+    cmd.setConvert(true);
+    cmd.exec(info);
+    if (!cmd.waitForFinish(false))
+        return;
+    writeHint(tr("File updated"));
+
 }
 
 void MainWindow::writeInfo(const QString &msg, bool time)
