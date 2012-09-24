@@ -1,5 +1,7 @@
 
 #include <iostream>
+#include <tuple>
+
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
 #include <boost/range/adaptors.hpp>
@@ -14,72 +16,75 @@
 #include "gdrive.h"
 #include "tools.h"
 
+using namespace std;
 using namespace boost::adaptors;
 using namespace boost::program_options;
 
 void show_help(const options_description& desc)
 {
-    std::cout << "\nGoogle Drive CLI " << "\n\n";
-    std::cout << desc << "\n";
+    cout << "\nGoogle Drive CLI " << "\n\n";
+    cout << desc << "\n";
 }
 
-typedef std::map<QString,
-    std::tuple<
+typedef map<QString,
+    tuple<
         positional_options_description,
         options_description,
         boost::function<void (gdrive&, const variables_map&)
         >
     >
-> Commands;
+> commands_t;
 
-Commands make_commands_desc()
+commands_t make_commands_desc()
 {
-
-    Commands cmds;
+    commands_t cmds;
     
     {
         auto& cmd = cmds["ls"];
         
-        std::get<0>(cmd).add("path", 1);
+        get<0>(cmd).add("path", 1);
 
-        std::get<1>(cmd).add_options()
-            ("path", value<std::string>()->default_value(QDir::rootPath().toLocal8Bit().constData()), "path")
+        get<1>(cmd).add_options()
+            ("path", value<string>()->default_value(QDir::rootPath().toLocal8Bit().constData()), "path")
+			("help", 	"Produce help message")			
             ("long,l", "long format")
         ;
         
-        std::get<2>(cmd) = boost::bind(&gdrive::list, _1, _2);
+        get<2>(cmd) = boost::bind(&gdrive::list, _1, _2);
     }
     
     {
         auto& cmd = cmds["cat"];
         
-        std::get<0>(cmd).add("path", 1);
+        get<0>(cmd).add("path", 1);
 
-        std::get<1>(cmd).add_options()
+        get<1>(cmd).add_options()
             ("path", value<std::string>()->default_value(QDir::rootPath().toLocal8Bit().constData()), "path")
+			("help", 	"Produce help message")
         ;
         
-        std::get<2>(cmd) = boost::bind(&gdrive::list, _1, _2);
+        get<2>(cmd) = boost::bind(&gdrive::list, _1, _2);
     }
     
     {
         auto& cmd = cmds["formats"];
         
-        std::get<0>(cmd).add("path", 1);
+        get<0>(cmd).add("path", 1);
 
-        std::get<1>(cmd).add_options()
+        get<1>(cmd).add_options()
             ("path", value<std::string>()->default_value(QDir::rootPath().toLocal8Bit().constData()), "path")
+			("help", 	"Produce help message")			
         ;
         
-        std::get<2>(cmd) = boost::bind(&gdrive::formats, _1, _2);
+        get<2>(cmd) = boost::bind(&gdrive::formats, _1, _2);
     }
 
     return cmds;
 }
 
-static const Commands c_commands_desc = make_commands_desc();
+static const commands_t c_commands_desc = make_commands_desc();
 
-QStringList commands()
+inline QStringList commands()
 {
     QStringList ret;
     BOOST_FOREACH(const QString& cmd, c_commands_desc | map_keys) {
@@ -88,45 +93,65 @@ QStringList commands()
     return ret;
 }
 
-typedef std::vector<std::string> Args;
+typedef vector<string> args_t;
+
+template <typename List>
+tuple<args_t, args_t, QString> split_args(const args_t& args, const List& list)
+{
+	BOOST_FOREACH(const QString& cmd, list) {
+		const auto it = find_if(args.begin(), args.end(), [&] (const string& str) {
+			return QString::fromLocal8Bit(str.c_str()) == cmd;
+		});
+
+		if (it != args.end()) {
+			return make_tuple(
+				args_t(args.begin(), it + 1),
+				args_t(it + 1, args.end()),
+				cmd
+			);
+		}
+	}
+
+	return make_tuple(
+		args,
+		args_t(),
+		QString()
+	);
+}
 
 int main(int argc, char** argv)
 {
-	const Args args = detail::cmdline(argc, argv).args;
+	const args_t full_args = detail::cmdline(argc, argv).args;
+
+	args_t global_args;
+	args_t command_args;
+	QString command;
+
+	tie(global_args, command_args, command) = split_args(full_args, c_commands_desc | map_keys);
 	
-	std::vector<std::string> positional_commands;
+    string path;
+	string filename;
+	string format;
 	
-    std::string path;
-	std::string filename;
-	std::string format;
+	positional_options_description cmd_pd;
+	cmd_pd.add("command", 1);
+
+	options_description main_desc("Available options");
+	main_desc.add_options()
+		("command", value<args_t>()->required()->multitoken(), commands().join(" | ").toLocal8Bit().constData())
+		("help", 	"Produce help message")
+		("debug,d", "Produce debug messages")
+	;
 	
-    
-    try
+	try
     {
         variables_map vm;
-        
-		positional_options_description cmd_pd;
-		cmd_pd.add("command", -1);
-			
-        options_description main_desc("Available options");
-        main_desc.add_options()
-			("command", value<Args>(&positional_commands)->required()->multitoken(), commands().join(" | ").toLocal8Bit().constData())
-            ("help", 	"Produce help message")
-            ("debug,d", "Produce debug messages")
-//             ("ls", value<std::string>(&path)->implicit_value("/tmp/test"), "list of files")
-// 			("get", value<std::string>(&path), "download file")
-// 			("output", value<std::string>(&filename), "output filename")
-// 			("format", value<std::string>(&format), "export format")
-// 			("formats", value<std::string>(&path), "list of formats")
-
-        ;
-
-		parsed_options parsed = command_line_parser(args)
-			.options(main_desc).positional(cmd_pd).allow_unregistered().run();
+		parsed_options parsed = command_line_parser(global_args)
+			.options(main_desc).positional(cmd_pd).run();
 
         store(parsed, vm);
 
-		if (vm.count("help") && !vm.count("command"))
+		if (vm.count("help"))
         {
 			show_help(main_desc);
             return EXIT_SUCCESS;
@@ -140,27 +165,24 @@ int main(int argc, char** argv)
         
         if (vm.count("command"))
         {
-			const std::string& command = positional_commands.front();
-			const Args cmd_args(++std::find(args.begin(), args.end(), command), args.end());
-
-            Commands::const_iterator it = c_commands_desc.find(QString::fromLocal8Bit(command.c_str()));
+            const auto it = c_commands_desc.find(command);
             if (it == c_commands_desc.end())
-                throw std::runtime_error("no such command");
+                throw runtime_error("no such command");
             
 			const auto& desc = it->second;
 
-			parsed_options parsed = command_line_parser(cmd_args)
-				.positional(std::get<0>(desc)).options(std::get<1>(desc)).allow_unregistered().run();
+			parsed_options parsed = command_line_parser(command_args)
+				.positional(get<0>(desc)).options(get<1>(desc)).run();
 
 			store(parsed, vm);
 
             if (vm.count("help"))
             {
-                show_help(std::get<1>(desc));
+                show_help(get<1>(desc));
                 return EXIT_SUCCESS;
             }
             
-            std::get<2>(desc)(cli, vm);
+            get<2>(desc)(cli, vm);
 		}
         else
         {
@@ -174,39 +196,12 @@ int main(int argc, char** argv)
         app.setOrganizationName("prog-org-ru-developers");
         app.setApplicationName("gdrive-cli");
         
-
-
-
-//         if (vm.count("ls"))
-//         {
-// 			std::cerr << "LS"<<std::endl;
-//             const QString qpath = path.c_str();
-// 			cli.list(vm);
-//         }
-//         else if (vm.count("formats"))
-//         {
-//             const QString qpath = path.c_str();
-// 			cli.delay(boost::bind(&gdrive::formats, &cli, qpath));
-//         }        
-//         else if (vm.count("get"))
-//         {
-//             const QString qpath = path.c_str();
-// 			const QString output = filename.c_str();
-// 			const QString qformat = format.c_str();
-// 			cli.delay(boost::bind(&gdrive::get, &cli, qpath, output, qformat));
-//         }        
-//         else
-//         {
-//             show_help(main_desc);
-//             return EXIT_SUCCESS;
-//         }
-        
         return app.exec();
-
     }
-    catch (std::exception& e)
+    catch (exception& e)
     {
-        std::cerr << e.what() << std::endl;
+        cerr << e.what() << endl;
+		show_help(main_desc);
         return EXIT_FAILURE;
     }
 }
