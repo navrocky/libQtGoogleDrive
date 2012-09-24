@@ -128,7 +128,7 @@ FileInfoList gdrive::request_items(const QString &path)
 
 void gdrive::list(const boost::program_options::variables_map& vm)
 {
-	assert(!p_->delayed);
+    assert(!p_->delayed);
     p_->delayed = [&] () {
         const QString path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());
         FileInfoList files = request_items(path);
@@ -242,6 +242,25 @@ void gdrive::formats(const boost::program_options::variables_map& vm)
     };
 }
 
+void gdrive::raw(const boost::program_options::variables_map& vm)
+{
+    assert(!p_->delayed);
+    p_->delayed = [&] () {
+        const QString path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());
+        FileInfoList files = request_items(path);
+
+        FileInfoExplorer e(files);
+        if (!e.cd(path))
+            throw std::runtime_error(e.error().toLocal8Bit().constData());
+
+        if (!e.path().isEmpty())
+        {
+            e.current().rawData();
+        }
+        
+        emit finished(EXIT_SUCCESS);
+    };
+}
 
 FileInfoExplorer::FileInfoExplorer(const FileInfoList& list)
     : list_(list)

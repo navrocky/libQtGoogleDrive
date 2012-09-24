@@ -46,7 +46,7 @@ commands_t make_commands_desc()
 
         get<1>(cmd).add_options()
             ("path", value<string>()->default_value(QDir::rootPath().toLocal8Bit().constData()), "path")
-			("help", 	"Produce help message")			
+            ("help", 	"Produce help message")
             ("long,l", "long format")
         ;
         
@@ -60,8 +60,8 @@ commands_t make_commands_desc()
 
         get<1>(cmd).add_options()
             ("path", value<std::string>()->default_value(QDir::rootPath().toLocal8Bit().constData()), "path")
-			("format", value<std::string>()->default_value(""), "export in specified format")
-			("help", 	"Produce help message")
+            ("format", value<std::string>()->default_value(""), "export in specified format")
+            ("help", 	"Produce help message")
         ;
         
         get<2>(cmd) = boost::bind(&gdrive::get, _1, _2);
@@ -74,11 +74,65 @@ commands_t make_commands_desc()
 
         get<1>(cmd).add_options()
             ("path", value<std::string>()->default_value(QDir::rootPath().toLocal8Bit().constData()), "path")
-			("help", 	"Produce help message")			
+            ("help", 	"Produce help message")			
         ;
         
         get<2>(cmd) = boost::bind(&gdrive::formats, _1, _2);
     }
+
+    {
+        auto& cmd = cmds["raw"];
+
+        get<0>(cmd).add("path", 1);
+
+        get<1>(cmd).add_options()
+            ("path", value<std::string>()->default_value(QDir::rootPath().toLocal8Bit().constData()), "path")
+            ("help",    "Produce help message")
+        ;
+
+        get<2>(cmd) = boost::bind(&gdrive::raw, _1, _2);
+    }
+//TODO
+//  cd  _unneeded_
+//  pwd _unneeded_
+//  put
+//  get
+//  mget
+//  mput
+// 
+//  edit _unneeded_
+//  less
+//  mkcol mkdir
+//  rmcol rm -r
+//  cat
+//  delete rm 
+
+//  copy cp
+//  move mv
+//  lock _unsupported_
+//  unlock _unsupported_
+//  discover _unsupported_
+//  steal _unsupported_
+//  showlocks _unsupported_
+
+//  version
+//  history
+// 
+//  checkin ???
+//  checkout ???
+//  uncheckout ???
+
+//  label title
+//  propnames raw field
+
+//  chexec ???
+// 
+//  propget
+//  propdel
+//  propset
+
+
+//  search
 
     return cmds;
 }
@@ -99,110 +153,110 @@ typedef vector<string> args_t;
 template <typename List>
 tuple<args_t, args_t, QString> split_args(const args_t& args, const List& list)
 {
-	BOOST_FOREACH(const QString& cmd, list) {
-		const auto it = find_if(args.begin(), args.end(), [&] (const string& str) {
-			return QString::fromLocal8Bit(str.c_str()) == cmd;
-		});
+    BOOST_FOREACH(const QString& cmd, list) {
+        const auto it = find_if(args.begin(), args.end(), [&] (const string& str) {
+            return QString::fromLocal8Bit(str.c_str()) == cmd;
+        });
 
-		if (it != args.end()) {
-			return make_tuple(
-				args_t(args.begin(), it + 1),
-				args_t(it + 1, args.end()),
-				cmd
-			);
-		}
-	}
+        if (it != args.end()) {
+            return make_tuple(
+                args_t(args.begin(), it + 1),
+                args_t(it + 1, args.end()),
+                cmd
+            );
+        }
+    }
 
-	return make_tuple(
-		args,
-		args_t(),
-		QString()
-	);
+    return make_tuple(
+        args,
+        args_t(),
+        QString()
+    );
 }
 
 int main(int argc, char** argv)
 {
-	const args_t full_args = detail::cmdline(argc, argv).args;
+    const args_t full_args = detail::cmdline(argc, argv).args;
 
-	args_t global_args;
-	args_t command_args;
-	QString command;
+    args_t global_args;
+    args_t command_args;
+    QString command;
 
-	tie(global_args, command_args, command) = split_args(full_args, c_commands_desc | map_keys);
-	
+    tie(global_args, command_args, command) = split_args(full_args, c_commands_desc | map_keys);
+
     string path;
-	string filename;
-	string format;
-	
-	positional_options_description cmd_pd;
-	cmd_pd.add("command", 1);
+    string filename;
+    string format;
 
-	options_description main_desc("Available options");
-	main_desc.add_options()
-		("command", value<args_t>()->required()->multitoken(), commands().join(" | ").toLocal8Bit().constData())
-		("help", 	"Produce help message")
-		("debug,d", "Produce debug messages")
-	;
-	
-	try
+    positional_options_description cmd_pd;
+    cmd_pd.add("command", 1);
+
+    options_description main_desc("Available options");
+    main_desc.add_options()
+        ("command", value<args_t>()->required()->multitoken(), commands().join(" | ").toLocal8Bit().constData())
+        ("help", 	"Produce help message")
+        ("debug,d", "Produce debug messages")
+    ;
+
+    try
     {
         variables_map vm;
-		parsed_options parsed = command_line_parser(global_args)
-			.options(main_desc).positional(cmd_pd).run();
+        parsed_options parsed = command_line_parser(global_args)
+            .options(main_desc).positional(cmd_pd).run();
 
         store(parsed, vm);
 
-		if (vm.count("help"))
+        if (vm.count("help"))
         {
-			show_help(main_desc);
+            show_help(main_desc);
             return EXIT_SUCCESS;
-		}
+        }
 
         notify(vm);
 
         gdrive cli;
         finilizer f;
-        QObject::connect(&cli, SIGNAL(finished(int)), &f, SLOT(exit(int)));    
-        
+        QObject::connect(&cli, SIGNAL(finished(int)), &f, SLOT(exit(int)));
+
         if (vm.count("command"))
         {
             const auto it = c_commands_desc.find(command);
             if (it == c_commands_desc.end())
                 throw runtime_error("no such command");
-            
-			const auto& desc = it->second;
 
-			parsed_options parsed = command_line_parser(command_args)
-				.positional(get<0>(desc)).options(get<1>(desc)).run();
+            const auto& desc = it->second;
 
-			store(parsed, vm);
+            parsed_options parsed = command_line_parser(command_args)
+                .positional(get<0>(desc)).options(get<1>(desc)).run();
+
+            store(parsed, vm);
 
             if (vm.count("help"))
             {
                 show_help(get<1>(desc));
                 return EXIT_SUCCESS;
             }
-            
+
             get<2>(desc)(cli, vm);
-		}
+        }
         else
         {
             show_help(main_desc);
             return EXIT_SUCCESS;
         }
-		
-		
+
+
         QCoreApplication app(argc, argv);
-        
+
         app.setOrganizationName("prog-org-ru-developers");
         app.setApplicationName("gdrive-cli");
-        
+
         return app.exec();
     }
     catch (exception& e)
     {
         cerr << e.what() << endl;
-		show_help(main_desc);
+        show_help(main_desc);
         return EXIT_FAILURE;
     }
 }
