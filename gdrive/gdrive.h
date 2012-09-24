@@ -24,11 +24,11 @@ signals:
 public:
     void list(const boost::program_options::variables_map& vm);
     void formats(const boost::program_options::variables_map& vm);    
-	void get(const QString& path, const QString& output, const QString& format = QString());
+	void get(const boost::program_options::variables_map& vm);
     
 private slots:
     void init();
-    bool refreshToken();
+    void refresh_token();
 
 private:
 	GoogleDrive::FileInfoList request_items(const QString& path);

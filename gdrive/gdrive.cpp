@@ -69,13 +69,13 @@ void gdrive::init()
     }
     else
     {
-        refreshToken();
+        refresh_token();
         s.setValue(c_refreshToken, p_->session.refreshToken());
     }
     p_->delayed();
 }
 
-bool gdrive::refreshToken()
+void gdrive::refresh_token()
 {
     CommandOAuth2 cmd(&p_->session);
     cmd.setScope(CommandOAuth2::FullAccessScope);
@@ -128,9 +128,9 @@ FileInfoList gdrive::request_items(const QString &path)
 
 void gdrive::list(const boost::program_options::variables_map& vm)
 {
+	assert(!p_->delayed);
     p_->delayed = [&] () {
         const QString path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());
-        
         FileInfoList files = request_items(path);
 
         FileInfoExplorer e(files);
@@ -179,59 +179,58 @@ QUrl extract_download_link(const FileInfo& info, const QString& format)
 	}
 }
 
-void gdrive::get(const QString &path, const QString& output, const QString& format)
+void gdrive::get(const boost::program_options::variables_map& vm)
 {
-	FileInfoList files = request_items(path);
+	assert(!p_->delayed);	
+	p_->delayed = [&] () {
+		const QString path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());
+		const QString format = QString::fromLocal8Bit(vm.at("format").as<std::string>().c_str());
+		
+		const FileInfoList files = request_items(path);
 
-    FileInfoExplorer e(files);
-	if (!e.cd(path))
-		throw std::runtime_error(e.error().toLocal8Bit().constData());
+		FileInfoExplorer e(files);
+		if (!e.cd(path))
+			throw std::runtime_error(e.error().toLocal8Bit().constData());
 
-	foreach(const QString& token, path.split("/")) {
-        if (token.isEmpty()) continue;
+		if (e.path().isEmpty())
+			throw std::runtime_error("can't download empty path");
 
-        e.cd(token);
-    }
+		if (e.isDir())
+			throw std::runtime_error("can't download directory");
 
-	if (e.path().isEmpty())
-		throw std::runtime_error("can't download empty path");
+		if (e.isFile())
+		{
+			QString output;
+			QFile file(output);
 
-	if (e.isDir())
-		throw std::runtime_error("can't download directory");
+			bool b = (output.isEmpty())
+				? file.open(stdout, QIODevice::WriteOnly)
+				: file.open(QIODevice::ReadWrite | QIODevice::Truncate);
 
-	if (e.isFile())
-	{
-		QFile file(output);
+			if (!b)
+				throw std::runtime_error(std::string("Can't open output: ")
+					+ ((output.isEmpty()) ? "STDOUT" : output.toLocal8Bit().constData()) );
 
-		bool b = (output.isEmpty())
-			? file.open(stdout, QIODevice::WriteOnly)
-			: file.open(QIODevice::ReadWrite | QIODevice::Truncate);
+			CommandDownloadFile dwn_cmd(&p_->session);
+			dwn_cmd.exec(extract_download_link(e.current(), format), &file);
+			if (!dwn_cmd.waitForFinish())
+					throw std::runtime_error(dwn_cmd.errorString().toLocal8Bit().constData());
+		}
 
-		if (!b)
-			throw std::runtime_error(std::string("Can't open output: ")
-				+ ((output.isEmpty()) ? "STDOUT" : output.toLocal8Bit().constData()) );
-
-		CommandDownloadFile dwn_cmd(&p_->session);
-		dwn_cmd.exec(extract_download_link(e.current(), format), &file);
-		if (!dwn_cmd.waitForFinish())
-                throw std::runtime_error(dwn_cmd.errorString().toLocal8Bit().constData());
-	}
-
-	emit finished(EXIT_SUCCESS);
+		emit finished(EXIT_SUCCESS);
+	};
 }
 
 void gdrive::formats(const boost::program_options::variables_map& vm)
 {
+	assert(!p_->delayed);	
     p_->delayed = [&] () {
         const QString path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());    
-        FileInfoList files = request_items(path);
+        const FileInfoList files = request_items(path);
+
         FileInfoExplorer e(files);
-
-        foreach(const QString& token, path.split("/")) {
-            if (token.isEmpty()) continue;
-
-            e.cd(token);
-        }
+        if (!e.cd(path))
+            throw std::runtime_error(e.error().toLocal8Bit().constData());
 
         if (!e.path().isEmpty())
         {

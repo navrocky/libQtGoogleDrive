@@ -60,10 +60,11 @@ commands_t make_commands_desc()
 
         get<1>(cmd).add_options()
             ("path", value<std::string>()->default_value(QDir::rootPath().toLocal8Bit().constData()), "path")
+			("format", value<std::string>()->default_value(""), "export in specified format")
 			("help", 	"Produce help message")
         ;
         
-        get<2>(cmd) = boost::bind(&gdrive::list, _1, _2);
+        get<2>(cmd) = boost::bind(&gdrive::get, _1, _2);
     }
     
     {
