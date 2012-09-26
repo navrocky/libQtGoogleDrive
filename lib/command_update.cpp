@@ -19,6 +19,10 @@ namespace GoogleDrive
 class CommandUpdatePrivate : public CommandPrivate
 {
 public:
+    CommandUpdatePrivate()
+        : convert(false)
+    {}
+
     FileInfo info;
     FileInfo resultInfo;
     bool convert;
@@ -91,7 +95,7 @@ void CommandUpdate::reexecuteQuery()
     Q_D(CommandUpdate);
 
     // prepare url
-    QString urlStr = QString("https://www.googleapis.com/upload/drive/v2/files/%1").arg(d->info.id());
+    QString urlStr = QString("https://www.googleapis.com/drive/v2/files/%1").arg(d->info.id());
     QUrl url(urlStr);
     if (d->convert)
         url.addQueryItem("convert", "true");
@@ -102,7 +106,7 @@ void CommandUpdate::reexecuteQuery()
     QVariantMap fileInfoMap = d->info.rawData();
     QByteArray data = QJson::Serializer().serialize(fileInfoMap);
 
-    QNetworkReply* reply = session()->networkManager()->post(request, data);
+    QNetworkReply* reply = session()->networkManager()->put(request, data);
     connect(reply, SIGNAL(finished()), this, SLOT(queryFinished()));
     reply->setParent(this);
 }

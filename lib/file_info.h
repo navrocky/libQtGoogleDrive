@@ -76,10 +76,12 @@ public:
     QDateTime lastViewedByMeDate() const;
     bool isEditable() const;
     QUrl downloadUrl() const;
-	QMap<QString, QUrl> exportList() const;
+    QMap<QString, QUrl> exportList() const;
 	
     qint64 fileSize() const;
+
     QStringList parents() const;
+    void setParents(const QStringList&);
     
 private:
     struct Impl;

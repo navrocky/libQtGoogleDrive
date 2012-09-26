@@ -9,6 +9,7 @@ namespace
 {
 const char* cId = "id";
 const char* cTitle = "title";
+const char* cParents = "parents";
 }
 
 struct FileInfo::Impl
@@ -123,17 +124,16 @@ QUrl FileInfo::downloadUrl() const
 
 QMap<QString, QUrl> FileInfo::exportList() const
 {
-	const QVariantMap vm = d->data.value("exportLinks").toMap();
-	
-	QMap<QString, QUrl> ret;
+    const QVariantMap vm = d->data.value("exportLinks").toMap();
 
-	QVariantMap::const_iterator it = vm.begin();
-	for(; it != vm.end(); ++it) {
-		ret[it.key()] = it.value().toString();
-	}
-    return ret;
+    QMap<QString, QUrl> res;
+
+    QVariantMap::ConstIterator it = vm.begin();
+    for (; it != vm.end(); ++it)
+        res[it.key()] = it.value().toString();
+
+    return res;
 }
-
 
 qint64 FileInfo::fileSize() const
 {
@@ -143,11 +143,18 @@ qint64 FileInfo::fileSize() const
 
 QStringList FileInfo::parents() const
 {
-    QStringList ret;
-    foreach(const QVariant& v, d->data.value("parents").toList()) {
-        ret << v.toMap()["id"].toString();
-    }
-    return ret;
+    QStringList res;
+    foreach (const QVariant& v, d->data.value(cParents).toList())
+        res << v.toMap()[cId].toString();
+    return res;
+}
+
+void FileInfo::setParents(const QStringList& l)
+{
+    QVariantList vl;
+    foreach (const QString& s, l)
+        vl << s;
+    d->data[cParents] = vl;
 }
 
 }
