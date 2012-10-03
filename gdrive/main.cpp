@@ -114,15 +114,12 @@ commands_t make_commands_desc()
 //  cd  _unneeded_
 //  pwd _unneeded_
 //  put
-//  get
-//  mget
 //  mput
 // 
 //  edit _unneeded_
 //  less
 //  mkcol mkdir
 //  rmcol rm -r
-//  cat
 //  delete rm 
 
 //  copy cp

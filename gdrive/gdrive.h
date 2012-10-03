@@ -33,10 +33,11 @@ private slots:
     void refresh_token();
 
 private:
-    /// first element always root
+    /// request all items associated with \p path. First element always \b root
 	GoogleDrive::FileInfoList request_items(const QString& path);
+
+    GoogleDrive::FileInfoList files_in_folder(const QString& id);
     void get_file(const GoogleDrive::FileInfo& file, const QString& format, QIODevice& output);
-    
     void get_folder(const GoogleDrive::FileInfo& folder, QDir dir = QDir());
     
 private:

@@ -132,40 +132,40 @@ void gdrive::refresh_token()
 FileInfoList gdrive::request_items(const QString &path)
 {
     FileInfoList result;
+    QString root_id;
     
-    CommandAbout about_cmd(&p_->session);
-    about_cmd.exec();
+    {
+        CommandAbout about_cmd(&p_->session);
+        about_cmd.exec();
 
-    if (!about_cmd.waitForFinish())
-        throw std::runtime_error(about_cmd.errorString().toLocal8Bit().constData());
+        if (!about_cmd.waitForFinish())
+            throw std::runtime_error(about_cmd.errorString().toLocal8Bit().constData());
 
-    const QString root_id = about_cmd.resultInfo().rootFolderId();
-    
-    CommandGet get_root(&p_->session);
-    get_root.exec(root_id);
+        root_id = about_cmd.resultInfo().rootFolderId();
+    }
+     
+    { // obtain root entry itself
+        CommandGet get_root(&p_->session);
+        get_root.exec(root_id);
 
-    if (!get_root.waitForFinish())
-        throw std::runtime_error(get_root.errorString().toLocal8Bit().constData());
-    
-    result << get_root.resultFileInfo();     
-    
-    CommandFileList ls_cmd(&p_->session);     
+        if (!get_root.waitForFinish())
+            throw std::runtime_error(get_root.errorString().toLocal8Bit().constData());
+        
+        result << get_root.resultFileInfo();
+    }
     
     if (dir::is_root(path))
     {
-        //query to obtain childs of root entry
-        ls_cmd.exec(QString("'%1' in parents").arg(root_id));
-         
-        if (!ls_cmd.waitForFinish())
-            throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
-
-        result << ls_cmd.files();
+        result << files_in_folder(root_id);
     }
     else
     {
+        CommandFileList ls_cmd(&p_->session);     
+        
         foreach(const QString& token, dir::split(path)) {
             if (token.isEmpty()) continue;
-    
+
+            //HACK There is no "or" operator in Google Drive API
             ls_cmd.exec(QString("title = '%1'").arg(token));
 
             if (!ls_cmd.waitForFinish())
@@ -193,16 +193,9 @@ void gdrive::list(const boost::program_options::variables_map& vm)
         if (!e.cd(path))
             throw std::runtime_error(e.error().toLocal8Bit().constData());
         
-        
-        
         if (e.isDir())
         {
-            CommandFileList ls_cmd(&p_->session);
-            ls_cmd.execForFolder(e.current().id());
-            if (!ls_cmd.waitForFinish())
-                throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
-            
-            files = ls_cmd.files();
+            files = files_in_folder(e.current().id());
         }
         else if (e.isFile())
         {
@@ -295,9 +288,6 @@ void gdrive::get(const boost::program_options::variables_map& vm)
 		if (!e.cd(path))
 			throw std::runtime_error(e.error().toLocal8Bit().constData());
 
-		if (e.isDir() && !recurse)
-			throw std::runtime_error("can't download directory");
-
 		if (e.isFile())
 		{
 			QFile file(output);
@@ -312,13 +302,13 @@ void gdrive::get(const boost::program_options::variables_map& vm)
 
             get_file(e.current(), format, file);
 		}
-		else if (e.isDir())
+		else if (e.isDir() && recurse)
         {
             get_folder(e.current());
         }
         else
         {
-            throw std::runtime_error("can't download unknown entry type");
+            throw std::runtime_error("can't download directory");
         }
 
 		emit finished(EXIT_SUCCESS);
@@ -333,7 +323,6 @@ void gdrive::get_file(const FileInfo& file, const QString& format, QIODevice& ou
             throw std::runtime_error(dwn_cmd.errorString().toLocal8Bit().constData());
 }
 
-
 void gdrive::get_folder(const FileInfo& folder, QDir dir)
 {
     if (!folder.isFolder())
@@ -342,13 +331,7 @@ void gdrive::get_folder(const FileInfo& folder, QDir dir)
     dir.mkdir(folder.title());
     dir.cd(folder.title());
     
-    CommandFileList ls_cmd(&p_->session);
-    ls_cmd.execForFolder(folder.id());
-
-    if (!ls_cmd.waitForFinish())
-        throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
-
-    BOOST_FOREACH(const FileInfo& info, ls_cmd.files()) {
+    BOOST_FOREACH(const FileInfo& info, files_in_folder(folder.id())) {
         if (info.isFolder())
         {
             get_folder(info, dir);
@@ -361,6 +344,17 @@ void gdrive::get_folder(const FileInfo& folder, QDir dir)
         }
     }
 }
+
+FileInfoList gdrive::files_in_folder(const QString& id)
+{
+    CommandFileList ls_cmd(&p_->session);
+    ls_cmd.execForFolder(id);
+
+    if (!ls_cmd.waitForFinish())
+        throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
+    return ls_cmd.files();
+}
+
 
 void gdrive::formats(const boost::program_options::variables_map& vm)
 {
