@@ -86,11 +86,6 @@ bool FileInfo::isFolder() const
 {
     return mimeType() == "application/vnd.google-apps.folder";
 }
-bool FileInfo::isRoot() const
-{
-    //FIXME works strange
-    return d->data.value("parents").toList().isEmpty();
-}
 
 QDateTime FileInfo::createdDate() const
 {
@@ -135,6 +130,20 @@ QMap<QString, QUrl> FileInfo::exportList() const
     return res;
 }
 
+QString FileInfo::extension(const QString& format) const
+{
+    if(!d->data.value("fileExtension").toString().isEmpty())
+    {
+        return d->data.value("fileExtension").toString();
+    }
+    else
+    {
+        int ext = exportList()[format].toString().lastIndexOf("=");    
+        return exportList()[format].toString().mid(++ext, -1);
+    }
+}
+
+
 qint64 FileInfo::fileSize() const
 {
     qint64 res = d->data.value("fileSize").toULongLong();
@@ -156,5 +165,46 @@ void FileInfo::setParents(const QStringList& l)
         vl << s;
     d->data[cParents] = vl;
 }
+
+namespace {
+    
+const QMap<FileInfo::Labels, QString>& labels()
+{
+    static QMap<FileInfo::Labels, QString> m;
+    if (m.isEmpty())
+    {
+        m[FileInfo::Hidden]     = "hidden";
+        m[FileInfo::Restricted] = "restricted";
+        m[FileInfo::Starred]    = "starred";
+        m[FileInfo::Trashed]    = "trashed";
+        m[FileInfo::Viewed]     = "viewed";        
+    }
+    return m;
+}
+
+const QString& name(FileInfo::Labels label)
+{
+    return labels().value(label);
+}
+
+}
+
+FileInfo::LabelsMask FileInfo::labels() const
+{
+    const QVariantMap& labels = d->data.value("labels").toMap();
+    return (labels.value(name(Hidden)).toBool())    ? Hidden    : None
+        | (labels.value(name(Restricted)).toBool()) ? Restricted: None
+        | (labels.value(name(Starred)).toBool())    ? Starred   : None
+        | (labels.value(name(Trashed)).toBool())    ? Trashed   : None
+        | (labels.value(name(Viewed)).toBool())     ? Viewed    : None
+        ;
+}
+
+bool GoogleDrive::FileInfo::hasLabel(FileInfo::Labels label) const
+{
+    return labels() & label;
+}
+
+
 
 }
