@@ -8,6 +8,7 @@
 
 #include <QObject>
 #include <QStringList>
+#include <QDir>
 
 #include "../lib/file_info.h"
 
@@ -32,7 +33,11 @@ private slots:
     void refresh_token();
 
 private:
+    /// first element always root
 	GoogleDrive::FileInfoList request_items(const QString& path);
+    void get_file(const GoogleDrive::FileInfo& file, const QString& format, QIODevice& output);
+    
+    void get_folder(const GoogleDrive::FileInfo& folder, QDir dir = QDir());
     
 private:
     struct Pimpl;

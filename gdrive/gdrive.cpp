@@ -1,7 +1,10 @@
 
 #include <iostream>
 #include <stdexcept>
+
 #include <boost/bind.hpp>
+#include <boost/foreach.hpp>
+#include <boost/property_tree/json_parser.hpp>
 #include <boost/range/adaptors.hpp>
 
 #include <QCoreApplication>
@@ -12,10 +15,14 @@
 #include <QDesktopServices>
 #include <QStringList>
 #include <QFile>
+#include <QDir>
+
+#include <qjson/serializer.h>
 
 #include "../lib/session.h"
 #include "../lib/command_oauth2.h"
 #include "../lib/command_about.h"
+#include "../lib/command_get.h"
 #include "../lib/command_file_list.h"
 #include "../lib/command_download_file.h"
 
@@ -32,6 +39,36 @@ const QString c_clientId = "1077721689698.apps.googleusercontent.com";
 const QString c_clientSecret = "HoJXcAl4JdCDHEohBVAvTW9a";
 
 const QString c_refreshToken = "refreshToken";
+
+
+struct dir {
+    
+    static QString simplify(const QString& path) {
+        QStringList path_list;
+        foreach(const QString& token, path.split("/")) {
+            if (token.isEmpty()) continue;
+            
+            path_list << token;
+        }
+        return "/" + path_list.join("/");
+    }
+    
+    static QString from_native(const QString& path) {
+        return simplify(QDir::fromNativeSeparators(path));
+    }
+    
+    static QString to_native(const QString& path) {
+        return QDir::toNativeSeparators(simplify(path));
+    }
+
+    static bool is_root(const QString& path) {
+        return simplify(path) == "/";
+    }
+    
+    static QStringList split(const QString& path) {
+        return path.split("/");
+    }
+};
 
 struct gdrive::Pimpl {
     
@@ -94,69 +131,114 @@ void gdrive::refresh_token()
 
 FileInfoList gdrive::request_items(const QString &path)
 {
-    QString query;
+    FileInfoList result;
+    
+    CommandAbout about_cmd(&p_->session);
+    about_cmd.exec();
 
-    foreach(const QString& token, path.split("/")) {
-        if (token.isEmpty()) continue;
+    if (!about_cmd.waitForFinish())
+        throw std::runtime_error(about_cmd.errorString().toLocal8Bit().constData());
 
-        query.isEmpty()
-            ? query += QString("title = '%1'").arg(token)
-            : query += QString(" or title = '%1'").arg(token);
-    }
+    const QString root_id = about_cmd.resultInfo().rootFolderId();
+    
+    CommandGet get_root(&p_->session);
+    get_root.exec(root_id);
 
-    if (query.isEmpty())
+    if (!get_root.waitForFinish())
+        throw std::runtime_error(get_root.errorString().toLocal8Bit().constData());
+    
+    result << get_root.resultFileInfo();     
+    
+    CommandFileList ls_cmd(&p_->session);     
+    
+    if (dir::is_root(path))
     {
-        CommandAbout about_cmd(&p_->session);
-        about_cmd.exec();
+        //query to obtain childs of root entry
+        ls_cmd.exec(QString("'%1' in parents").arg(root_id));
+         
+        if (!ls_cmd.waitForFinish())
+            throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
 
-        if (!about_cmd.waitForFinish())
-            throw std::runtime_error(about_cmd.errorString().toLocal8Bit().constData());
-
-        const QString root_id = about_cmd.resultInfo().rootFolderId();
-        query = QString("'%1' in parents").arg(root_id);
+        result << ls_cmd.files();
     }
+    else
+    {
+        foreach(const QString& token, dir::split(path)) {
+            if (token.isEmpty()) continue;
+    
+            ls_cmd.exec(QString("title = '%1'").arg(token));
 
-    CommandFileList ls_cmd(&p_->session);
-    ls_cmd.exec(query);
+            if (!ls_cmd.waitForFinish())
+                throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
 
-    if (!ls_cmd.waitForFinish())
-        throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
-
-    return ls_cmd.files();
+            result << ls_cmd.files();
+        }        
+    }
+    
+    return result;
 }
-
 
 void gdrive::list(const boost::program_options::variables_map& vm)
 {
     assert(!p_->delayed);
     p_->delayed = [&] () {
-        const QString path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());
+        const QString native_path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());
+        const QString path = dir::from_native(native_path);
+        const bool long_fmt = vm.count("long");
+        const bool raw = vm.count("raw");
+        
         FileInfoList files = request_items(path);
-
+        
         FileInfoExplorer e(files);
         if (!e.cd(path))
             throw std::runtime_error(e.error().toLocal8Bit().constData());
         
-        if (!e.path().isEmpty())
+        
+        
+        if (e.isDir())
         {
-            if (e.isDir())
-            {
-                CommandFileList ls_cmd(&p_->session);
-                ls_cmd.execForFolder(e.current().id());
-                if (!ls_cmd.waitForFinish())
-                    throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
-                
-                files = ls_cmd.files();
-            }
-            else if (e.isFile())
-            {
-                files = FileInfoList() << e.current();
-            }
+            CommandFileList ls_cmd(&p_->session);
+            ls_cmd.execForFolder(e.current().id());
+            if (!ls_cmd.waitForFinish())
+                throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
+            
+            files = ls_cmd.files();
         }
-    
+        else if (e.isFile())
+        {
+            files = FileInfoList() << e.current();
+        }
         
         foreach(const GoogleDrive::FileInfo& info, files) {
-            std::cout << "[file] " << info.title().toLocal8Bit().constData() << std::endl;
+            if(raw)
+            {
+                const QByteArray data = QJson::Serializer().serialize(info.rawData());
+                std::stringstream ss;
+                ss.str(data.constData());
+
+                boost::property_tree::ptree ptree;
+                boost::property_tree::read_json( ss, ptree );
+        
+                boost::property_tree::write_json( std::cout, ptree );
+            }
+            else if (!long_fmt)
+            {
+                std::cout << info.title().toLocal8Bit().constData() << std::endl;
+            }
+            else
+            {
+                std::cout << 
+                    QString("%1%2%3%4%5%6%7 %8")
+                        .arg(info.isFolder()    ? "d" : "f")
+                        .arg(info.isEditable()  ? "w" : "r")
+                        .arg(info.hasLabel(FileInfo::Hidden)    ? "h" : "-")
+                        .arg(info.hasLabel(FileInfo::Restricted)? "r" : "-")
+                        .arg(info.hasLabel(FileInfo::Starred)   ? "s" : "-")
+                        .arg(info.hasLabel(FileInfo::Trashed)   ? "t" : "-")
+                        .arg(info.hasLabel(FileInfo::Viewed)    ? "v" : "-")
+                        .arg(info.title()).toLocal8Bit().constData()
+                << std::endl;
+            }
         }
         
         emit finished(EXIT_SUCCESS);
@@ -175,16 +257,37 @@ QUrl extract_download_link(const FileInfo& info, const QString& format)
 	}
 	else
 	{
-		throw std::runtime_error("invalid export format");
+        QString error_str("invalid export format\nAvailable formats:");
+        BOOST_FOREACH(const auto& p, info.exportList().toStdMap()) {
+            error_str += "\n\t" + p.first;
+        }
+		throw std::runtime_error(error_str.toLocal8Bit().constData());
 	}
+}
+
+QString make_file_name(const FileInfo& info, const QString& format)
+{
+    if (!info.downloadUrl().isEmpty())
+    {
+        return info.title();
+    }
+    else
+    {
+        QString ext = info.extension(format);
+        return info.title() + ((ext.isEmpty()) ? "" : "." + ext);
+    }
+
 }
 
 void gdrive::get(const boost::program_options::variables_map& vm)
 {
 	assert(!p_->delayed);	
 	p_->delayed = [&] () {
-		const QString path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());
+        const QString native_path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());
+        const QString path = dir::from_native(native_path);
 		const QString format = QString::fromLocal8Bit(vm.at("format").as<std::string>().c_str());
+        const QString output = QString::fromLocal8Bit(vm["filename"].as<std::string>().c_str());
+        const bool recurse = vm.count("recursevly");
 		
 		const FileInfoList files = request_items(path);
 
@@ -192,15 +295,11 @@ void gdrive::get(const boost::program_options::variables_map& vm)
 		if (!e.cd(path))
 			throw std::runtime_error(e.error().toLocal8Bit().constData());
 
-		if (e.path().isEmpty())
-			throw std::runtime_error("can't download empty path");
-
-		if (e.isDir())
+		if (e.isDir() && !recurse)
 			throw std::runtime_error("can't download directory");
 
 		if (e.isFile())
 		{
-			QString output;
 			QFile file(output);
 
 			bool b = (output.isEmpty())
@@ -211,33 +310,74 @@ void gdrive::get(const boost::program_options::variables_map& vm)
 				throw std::runtime_error(std::string("Can't open output: ")
 					+ ((output.isEmpty()) ? "STDOUT" : output.toLocal8Bit().constData()) );
 
-			CommandDownloadFile dwn_cmd(&p_->session);
-			dwn_cmd.exec(extract_download_link(e.current(), format), &file);
-			if (!dwn_cmd.waitForFinish())
-					throw std::runtime_error(dwn_cmd.errorString().toLocal8Bit().constData());
+            get_file(e.current(), format, file);
 		}
+		else if (e.isDir())
+        {
+            get_folder(e.current());
+        }
+        else
+        {
+            throw std::runtime_error("can't download unknown entry type");
+        }
 
 		emit finished(EXIT_SUCCESS);
 	};
+}
+
+void gdrive::get_file(const FileInfo& file, const QString& format, QIODevice& output)
+{
+    CommandDownloadFile dwn_cmd(&p_->session);
+    dwn_cmd.exec(extract_download_link(file, format), &output);
+    if (!dwn_cmd.waitForFinish())
+            throw std::runtime_error(dwn_cmd.errorString().toLocal8Bit().constData());
+}
+
+
+void gdrive::get_folder(const FileInfo& folder, QDir dir)
+{
+    if (!folder.isFolder())
+        throw std::logic_error("entry in not folder");
+    
+    dir.mkdir(folder.title());
+    dir.cd(folder.title());
+    
+    CommandFileList ls_cmd(&p_->session);
+    ls_cmd.execForFolder(folder.id());
+
+    if (!ls_cmd.waitForFinish())
+        throw std::runtime_error(ls_cmd.errorString().toLocal8Bit().constData());
+
+    BOOST_FOREACH(const FileInfo& info, ls_cmd.files()) {
+        if (info.isFolder())
+        {
+            get_folder(info, dir);
+        }
+        else
+        {
+            QFile file(dir.filePath(make_file_name(info, "application/pdf")));
+            file.open(QIODevice::ReadWrite | QIODevice::Truncate);
+             get_file(info, "application/pdf", file);
+        }
+    }
 }
 
 void gdrive::formats(const boost::program_options::variables_map& vm)
 {
 	assert(!p_->delayed);	
     p_->delayed = [&] () {
-        const QString path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());    
+        const QString native_path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());
+        const QString path = dir::from_native(native_path);  
         const FileInfoList files = request_items(path);
 
         FileInfoExplorer e(files);
         if (!e.cd(path))
             throw std::runtime_error(e.error().toLocal8Bit().constData());
 
-        if (!e.path().isEmpty())
-        {
-            foreach(const QString& format, e.current().exportList().toStdMap() | map_keys) {
-                std::cout << format.toLocal8Bit().constData() << std::endl;
-            }
+        foreach(const QString& format, e.current().exportList().toStdMap() | map_keys) {
+            std::cout << format.toLocal8Bit().constData() << std::endl;
         }
+            
         emit finished(EXIT_SUCCESS);
     };
 }
@@ -246,18 +386,23 @@ void gdrive::raw(const boost::program_options::variables_map& vm)
 {
     assert(!p_->delayed);
     p_->delayed = [&] () {
-        const QString path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());
+        const QString native_path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());
+        const QString path = dir::from_native(native_path);
         FileInfoList files = request_items(path);
 
         FileInfoExplorer e(files);
         if (!e.cd(path))
             throw std::runtime_error(e.error().toLocal8Bit().constData());
 
-        if (!e.path().isEmpty())
-        {
-            e.current().rawData();
-        }
+        const QByteArray data = QJson::Serializer().serialize(e.current().rawData());
+        std::stringstream ss;
+        ss.str(data.constData());
+
+        boost::property_tree::ptree ptree;
+        boost::property_tree::read_json( ss, ptree );
         
+        boost::property_tree::write_json( std::cout, ptree );
+
         emit finished(EXIT_SUCCESS);
     };
 }
@@ -265,10 +410,16 @@ void gdrive::raw(const boost::program_options::variables_map& vm)
 FileInfoExplorer::FileInfoExplorer(const FileInfoList& list)
     : list_(list)
 {
+    cd("/");
 }
 
 bool FileInfoExplorer::cd(const QStringList& list)
 {
+    if (list.front().isEmpty())
+    {
+        cd("/");
+    }
+    
 	foreach (const QString& token, list) {
 		if (token.isEmpty()) continue;
 
@@ -279,7 +430,6 @@ bool FileInfoExplorer::cd(const QStringList& list)
 		
 		const FileInfoList::const_iterator it = std::find_if(list_.begin(), list_.end(), finder);
 
-		
 		if (it == list_.end())
 		{
 			error_ = "there is no item with name: " + token;
@@ -300,7 +450,19 @@ bool FileInfoExplorer::cd(const QStringList& list)
 
 bool FileInfoExplorer::cd(const QString& path)
 {
-	return cd(path.split("/"));
+    if (dir::is_root(path))
+    {
+        path_list_.clear();
+        path_.clear();
+        
+        path_list_ << list_.front();
+        path_ << "";
+        return true;
+    }
+    else
+    {
+        return cd(dir::split(path));
+    }
 }
 
 QString FileInfoExplorer::path() const
