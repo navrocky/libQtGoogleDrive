@@ -25,6 +25,7 @@
 #include "../lib/command_get.h"
 #include "../lib/command_file_list.h"
 #include "../lib/command_download_file.h"
+#include "../lib/command_upload_file.h"
 
 #include <qjson/serializer.h>
 #include <qjson/parser.h>
@@ -313,6 +314,39 @@ void gdrive::get(const boost::program_options::variables_map& vm)
 
 		emit finished(EXIT_SUCCESS);
 	};
+}
+
+void gdrive::put(const boost::program_options::variables_map& vm)
+{
+    assert(!p_->delayed);
+    p_->delayed = [&] () {
+        const QString native_path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());
+        const QString path = dir::from_native(native_path);
+        const QString input = QString::fromLocal8Bit(vm["filename"].as<std::string>().c_str());
+        const bool recurse = vm.count("recursevly");
+
+
+        QFile file(input);
+
+        bool b = file.open(QIODevice::ReadOnly);
+
+        if (!b)
+            throw std::runtime_error(std::string("Can't open output: ") + input.toLocal8Bit().constData());
+
+        CommandUploadFile upload(&p_->session);
+
+        FileInfo info;
+        info.setTitle(input);
+
+        info.rawData()["X-my-field"] = "my-value";
+        
+        upload.exec(info, &file);
+
+        if (!upload.waitForFinish())
+            throw std::runtime_error(upload.errorString().toLocal8Bit().constData());
+
+        emit finished(EXIT_SUCCESS);
+    };   
 }
 
 void gdrive::get_file(const FileInfo& file, const QString& format, QIODevice& output)

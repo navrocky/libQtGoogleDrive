@@ -110,6 +110,23 @@ commands_t make_commands_desc()
 
         get<2>(cmd) = boost::bind(&gdrive::get, _1, _2);
     }
+
+    {
+        auto& cmd = cmds["put"];
+
+        get<0>(cmd).add("path", 1);
+        get<0>(cmd).add("filename", 1);
+
+        get<1>(cmd).add_options()
+            ("path", value<std::string>()->default_value(QDir::rootPath().toLocal8Bit().constData()), "path")
+            ("filename", value<std::string>()->default_value(""), "filename to store to")
+            ("recursevly,r", "download whole directory")
+            ("help",    "Produce help message")
+        ;
+
+        get<2>(cmd) = boost::bind(&gdrive::put, _1, _2);
+    }
+    
 //TODO
 //  cd  _unneeded_
 //  pwd _unneeded_

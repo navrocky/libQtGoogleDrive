@@ -26,6 +26,7 @@ public:
     void list(const boost::program_options::variables_map& vm);
     void formats(const boost::program_options::variables_map& vm);    
     void get(const boost::program_options::variables_map& vm);
+    void put(const boost::program_options::variables_map& vm);
     void raw(const boost::program_options::variables_map& vm);
     
 private slots:
