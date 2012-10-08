@@ -52,10 +52,16 @@ bool FileInfo::isEmpty() const
     return d->data.isEmpty();
 }
 
-QVariantMap FileInfo::rawData() const
+const QVariantMap& FileInfo::rawData() const
 {
     return d->data;
 }
+
+QVariantMap& FileInfo::rawData()
+{
+    return d->data;
+}
+
 
 QString FileInfo::id() const
 {
@@ -168,10 +174,10 @@ void FileInfo::setParents(const QStringList& l)
 
 namespace {
     
-const QMap<FileInfo::Labels, QString>& labels()
+const std::map<FileInfo::Labels, QString>& labels()
 {
-    static QMap<FileInfo::Labels, QString> m;
-    if (m.isEmpty())
+    static std::map<FileInfo::Labels, QString> m;
+    if (m.empty())
     {
         m[FileInfo::Hidden]     = "hidden";
         m[FileInfo::Restricted] = "restricted";
@@ -184,7 +190,7 @@ const QMap<FileInfo::Labels, QString>& labels()
 
 const QString& name(FileInfo::Labels label)
 {
-    return labels().value(label);
+    return labels().at(label);
 }
 
 }

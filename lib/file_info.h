@@ -71,7 +71,8 @@ public:
 
     bool isEmpty() const;
 
-    QVariantMap rawData() const;
+    const QVariantMap& rawData() const;
+    QVariantMap& rawData();
 
     QString id() const;
     void setId(const QString&);
