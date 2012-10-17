@@ -320,9 +320,11 @@ void gdrive::put(const boost::program_options::variables_map& vm)
 {
     assert(!p_->delayed);
     p_->delayed = [&] () {
-        const QString native_path = QString::fromLocal8Bit(vm.at("path").as<std::string>().c_str());
-        const QString path = dir::from_native(native_path);
-        const QString input = QString::fromLocal8Bit(vm["filename"].as<std::string>().c_str());
+        const QString input = QString::fromLocal8Bit(vm.at("filename").as<std::string>().c_str());
+        
+        const QString native_path = QString::fromLocal8Bit(vm["path"].as<std::string>().c_str());
+        const QString path = dir::from_native(native_path.isEmpty() ? QFileInfo(input).fileName() : native_path);
+
         const bool recurse = vm.count("recursevly");
 
 

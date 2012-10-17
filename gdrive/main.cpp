@@ -114,13 +114,13 @@ commands_t make_commands_desc()
     {
         auto& cmd = cmds["put"];
 
-        get<0>(cmd).add("path", 1);
         get<0>(cmd).add("filename", 1);
+        get<0>(cmd).add("path", 1);
 
         get<1>(cmd).add_options()
-            ("path", value<std::string>()->default_value(QDir::rootPath().toLocal8Bit().constData()), "path")
-            ("filename", value<std::string>()->default_value(""), "filename to store to")
-            ("recursevly,r", "download whole directory")
+            ("filename", value<std::string>()->default_value(""), "filename to store")        
+            ("path", value<std::string>(), "path to store")
+            ("recursive,r", "download whole directory")
             ("help",    "Produce help message")
         ;
 
